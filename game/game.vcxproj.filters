@@ -1,0 +1,175 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Resource Files\gfx">
+      <UniqueIdentifier>{75d7b3bb-a213-45cc-a193-53cd64a74e02}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files\fonts">
+      <UniqueIdentifier>{12a507ff-3c31-4b49-a0c4-321bdadde5f7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files\maps">
+      <UniqueIdentifier>{52aec010-bffe-40b4-95d4-5b41751ff501}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="pch.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Entity.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Vars.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Viewport.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Cursor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Funcs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Console.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="HeldItem.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Warp.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Player.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Bullet.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Solid.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ScreenMessage.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="pch.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="game.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Entity.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Viewport.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Cursor.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Console.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="HeldItem.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Warp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Player.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Bullet.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Solid.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ScreenMessage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+    <None Include="maps\house1.tmx">
+      <Filter>Resource Files\maps</Filter>
+    </None>
+    <None Include="maps\house2.tmx">
+      <Filter>Resource Files\maps</Filter>
+    </None>
+    <None Include="maps\map.tmx">
+      <Filter>Resource Files\maps</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="bullet.bmp">
+      <Filter>Resource Files\gfx</Filter>
+    </Image>
+    <Image Include="critter.bmp">
+      <Filter>Resource Files\gfx</Filter>
+    </Image>
+    <Image Include="crosshair.bmp">
+      <Filter>Resource Files\gfx</Filter>
+    </Image>
+    <Image Include="cursor.bmp">
+      <Filter>Resource Files\gfx</Filter>
+    </Image>
+    <Image Include="exp.bmp">
+      <Filter>Resource Files\gfx</Filter>
+    </Image>
+    <Image Include="fire_critter.bmp">
+      <Filter>Resource Files\gfx</Filter>
+    </Image>
+    <Image Include="fireball.bmp">
+      <Filter>Resource Files\gfx</Filter>
+    </Image>
+    <Image Include="minor_health.bmp">
+      <Filter>Resource Files\gfx</Filter>
+    </Image>
+    <Image Include="npc_old_man.bmp">
+      <Filter>Resource Files\gfx</Filter>
+    </Image>
+    <Image Include="player.bmp">
+      <Filter>Resource Files\gfx</Filter>
+    </Image>
+    <Image Include="shotdecal.bmp">
+      <Filter>Resource Files\gfx</Filter>
+    </Image>
+    <Image Include="zombie_critter.bmp">
+      <Filter>Resource Files\gfx</Filter>
+    </Image>
+    <Image Include="amulet.bmp">
+      <Filter>Resource Files\gfx</Filter>
+    </Image>
+    <Image Include="gfx\tilesheet.bmp">
+      <Filter>Resource Files\gfx</Filter>
+    </Image>
+    <Image Include="uzi.bmp">
+      <Filter>Resource Files\gfx</Filter>
+    </Image>
+    <Image Include="gfx\pistol.bmp">
+      <Filter>Resource Files\gfx</Filter>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <Font Include="..\..\..\..\..\..\Fonts\arial.ttf">
+      <Filter>Resource Files\fonts</Filter>
+    </Font>
+    <Font Include="lunchds.ttf">
+      <Filter>Resource Files\fonts</Filter>
+    </Font>
+  </ItemGroup>
+</Project>
