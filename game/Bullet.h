@@ -1,7 +1,5 @@
 #pragma once
 #include <sstream>
-#include "Entity.h"
-#include "Vars.h"
 class Bullet : public Entity
 {
 public:

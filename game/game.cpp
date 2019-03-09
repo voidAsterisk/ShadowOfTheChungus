@@ -31,7 +31,7 @@
 std::vector<SDL_Rect> hurt;
 std::vector<KillID> killedmapid = std::vector<KillID>();
 std::vector<Warp> warps;
-
+std::vector<Entity*> entities;
 Console cons;
 
 void SetGameState(GameStates gs);
@@ -200,7 +200,7 @@ public:
 
 	void OnClick()
 	{
-		Viewport::PostMessage("[" + Name + "] " + Dialog);
+		Viewport::PostMessage(&entities, "[" + Name + "] " + Dialog);
 	}
 
 	virtual void Draw(SDL_Renderer* ren)

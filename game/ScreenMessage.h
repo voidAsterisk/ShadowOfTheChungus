@@ -1,7 +1,5 @@
 #pragma once
 #include <vector>
-#include "Entity.h"
-#include "Vars.h"
 class ScreenMessage : public
 	Entity
 {

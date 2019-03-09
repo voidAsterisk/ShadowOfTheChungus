@@ -1,6 +1,5 @@
 #pragma once
 #include <SDL.h>
-#include "Entity.h"
 
 SDL_Texture* LoadImage(SDL_Renderer* ren, std::string img)
 {

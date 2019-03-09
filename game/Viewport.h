@@ -1,7 +1,7 @@
 #pragma once
 #include <vector>
-#include "Entity.h"
-#include "ScreenMessage.h"
+class Entity;
+
 class Viewport
 {
 public:

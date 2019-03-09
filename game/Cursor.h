@@ -1,8 +1,5 @@
 #pragma once
 #include <SDL.h>
-#include "Entity.h"
-#include "Vars.h"
-
 enum CursorMode
 {
 	Crosshair,

@@ -1,7 +1,4 @@
 #pragma once
-#include "Entity.h"
-#include "HeldItem.h"
-#include "Bullet.h"
 class Player : public Entity
 {
 public:
