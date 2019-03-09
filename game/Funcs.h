@@ -1,5 +1,7 @@
 #pragma once
 #include <SDL.h>
+#include "Entity.h"
+#include "BloodParticle.h"
 
 SDL_Texture* LoadImage(SDL_Renderer* ren, std::string img)
 {
@@ -48,5 +50,20 @@ bool lineRect(float x1, float y1, float x2, float y2, float rx, float ry, float 
 		return true;
 	}
 	return false;
+}
+
+void GenerateBloodSplatter(Viewport* viewport, std::vector<Entity*>* e, double x, double y, double angle)
+{
+	for (int i = 0; i < rand() % 100 + 50; i++)
+	{
+		double a = rand();
+		a *= 180 / M_PI;
+		a += rand() % 30 - 15;
+		a *= M_PI / 180;
+		double nx = x + cos(angle + a) * (rand() % 50);
+		double ny = y + sin(angle + a) * (rand() % 50);
+		BloodParticle* b = new BloodParticle(viewport, nx, ny);
+		(*e).push_back(b);
+	}
 }
 

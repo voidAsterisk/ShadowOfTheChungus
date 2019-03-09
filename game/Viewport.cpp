@@ -1,10 +1,7 @@
 #include "pch.h"
 #include "Viewport.h"
 
-double Viewport::X;
-double Viewport::Y;
-double Viewport::Width;
-double Viewport::Height;
+#include "ScreenMessage.h"
 
 Viewport::Viewport()
 {
@@ -23,13 +20,13 @@ Viewport::~Viewport()
 {
 }
 
-void Viewport::PostMessage(std::vector<Entity*>* ents, std::string msg)
+void Viewport::PostMessage(Viewport* viewport, std::vector<Entity*>* ents, std::string msg)
 {
-	ScreenMessage* m = new ScreenMessage(ents, msg, msgfont);
+	ScreenMessage* m = new ScreenMessage(viewport, ents, msg, msgfont);
 	ents->push_back(m);
 }
-void Viewport::PostMessage(std::vector<Entity*>* ents, bool drawmid, bool bg, bool relative, int dieafter, double x, double y, std::string msg)
+void Viewport::PostMessage(Viewport* viewport, std::vector<Entity*>* ents, bool drawmid, bool bg, bool relative, int dieafter, double x, double y, std::string msg)
 {
-	ScreenMessage* m = new ScreenMessage(ents, drawmid, bg, relative, dieafter, x, y, msg, msgfont);
+	ScreenMessage* m = new ScreenMessage(viewport, ents, drawmid, bg, relative, dieafter, x, y, msg, msgfont);
 	ents->push_back(m);
 }

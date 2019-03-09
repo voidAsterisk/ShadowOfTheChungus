@@ -153,10 +153,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="BloodParticle.h" />
     <ClInclude Include="Bullet.h" />
     <ClInclude Include="Console.h" />
     <ClInclude Include="Cursor.h" />
     <ClInclude Include="Entity.h" />
+    <ClInclude Include="Fonts.h" />
     <ClInclude Include="Funcs.h" />
     <ClInclude Include="HeldItem.h" />
     <ClInclude Include="pch.h" />
@@ -168,6 +170,7 @@
     <ClInclude Include="Warp.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="BloodParticle.cpp" />
     <ClCompile Include="Bullet.cpp" />
     <ClCompile Include="Console.cpp" />
     <ClCompile Include="Cursor.cpp" />

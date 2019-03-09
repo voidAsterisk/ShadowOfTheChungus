@@ -16,7 +16,6 @@
 #include<array>
 #include <math.h>
 #include <boost/tokenizer.hpp>
-#include "Vars.h"
 #include "Funcs.h"
 #include "Entity.h"
 #include "Cursor.h"
@@ -25,6 +24,11 @@
 #include "Warp.h"
 #include "Player.h"
 #include "Bullet.h"
+#include "Solid.h"
+#include "BloodParticle.h"
+#include "Fonts.h"
+#include "Viewport.h"
+
 #pragma comment (lib, "SDL2")
 #pragma comment (lib, "SDL2_ttf")
 
@@ -32,10 +36,44 @@ std::vector<SDL_Rect> hurt;
 std::vector<KillID> killedmapid = std::vector<KillID>();
 std::vector<Warp> warps;
 std::vector<Entity*> entities;
+std::vector<Solid> solids;
 Console cons;
 
+static int SCALE = 2;
+static int SCRW = 1280;
+static int SCRH = 720;
+static bool FULLSCRN = true;
+static bool* keys = new bool[1024];
+static SDL_Renderer* renderer;
+static Viewport viewport = Viewport(0, 0, SCRW, SCRH);
+static bool quit = false;
+static std::string currentmap;
+static Player* player;
+
+static SDL_Window* window;
+static SDL_Texture* tex_tilesheet;
+
+enum GameStates {
+	TitleMenu,
+	Playing,
+	Death,
+	Paused,
+	Options
+};
+static GameStates gamestate = TitleMenu;
+static GameStates lastgamestate;
+
+class MouseState
+{
+public:
+	int X;
+	int Y;
+	int LeftDown;
+	int RightDown;
+};
+static MouseState currentmousestate, previousmousestate;
+
 void SetGameState(GameStates gs);
-void GenerateBloodSplatter(double x, double y, double angle);
 void ClearEntities();
 
 void SetGameState(GameStates gs)
@@ -76,7 +114,7 @@ public:
 		Name = name;
 		Id = id;
 		Respawn = false;
-		Solid = false;
+		IsSolid = false;
 	}
 
 	virtual void Update(double dt)
@@ -90,7 +128,7 @@ public:
 			Alive = false;
 			HeldItem it = HeldItem(Name, Id);
 			player->AddItem(it);
-			PostMessage((std::string)"Obtained " + Name + "!");
+			Viewport::PostMessage(&viewport, &entities, (std::string)"Obtained " + Name + "!");
 		}
 	}
 };
@@ -104,7 +142,7 @@ public:
 		X = x;
 		Y = y;
 		Name = name;
-		Solid = false;
+		IsSolid = false;
 	}
 
 	virtual void Update(double dt)
@@ -129,7 +167,7 @@ public:
 		X = x;
 		Y = y;
 		Name = name;
-		Solid = false;
+		IsSolid = false;
 	}
 
 	virtual void Update(double dt)
@@ -200,12 +238,12 @@ public:
 
 	void OnClick()
 	{
-		Viewport::PostMessage(&entities, "[" + Name + "] " + Dialog);
+		Viewport::PostMessage(&viewport, &entities, "[" + Name + "] " + Dialog);
 	}
 
 	virtual void Draw(SDL_Renderer* ren)
 	{
-		Entity::Draw(ren);
+		Entity::Draw(viewport, ren);
 
 		// Draw text if cursor rect intersects self rect
 		SDL_Rect curr = { cursor->X, cursor->Y, cursor->Width, cursor->Height };
@@ -303,7 +341,7 @@ public:
 		Width = 8;
 		Height = 8;
 
-		Solid = false;
+		IsSolid = false;
 	}
 
 	virtual void Update(double dt)
@@ -325,7 +363,7 @@ public:
 			d->Height = 4;
 			d->Fade = true;
 			d->LoadImage(renderer, "gfx/" + (std::string)"shotdecal.bmp");
-			d->Solid = false;
+			d->IsSolid = false;
 			d->DeathTime = SDL_GetTicks() + 10000;
 			entities.push_back(d);
 			return;
@@ -375,7 +413,7 @@ public:
 		Name = "Critter";
 		Action = Standing;
 		MaxVelocity = 0.02;
-		Solid = true;
+		IsSolid = true;
 
 		nextx = X + cos(rand()) * (rand() % 10);
 		nexty = Y + sin(rand()) * (rand() % 10);
@@ -420,29 +458,18 @@ public:
 		if (Health <= 0)
 		{
 			Alive = false;
-			// Spawn entity destruction
-			for (int j = 0; j < ExperienceDrop(); j++)
-			{
-				player->Experience++;
-				if (player->Experience == player->NextExperience)
-				{
-					player->Experience = 0;
-					player->Level++;
-					player->NextExperience = NextExp(player->Level);
-				}
-			}
 		}
 	}
 	virtual void Draw(SDL_Renderer* ren)
 	{
-		Entity::Draw(ren);
+		Entity::Draw(viewport, ren);
 		// Draw text if cursor rect intersects self rect
 		SDL_Rect curr = { cursor->X, cursor->Y, cursor->Width, cursor->Height };
 		SDL_Rect r = { X + viewport.X, Y + viewport.Y, Width * SCALE, Height * SCALE };
 
 		if (SDL_HasIntersection(&curr, &r))
 		{
-			DrawHealthBar(ren);
+			DrawHealthBar(viewport, ren);
 		}
 	}
 };
@@ -465,7 +492,7 @@ public:
 		Name = "Fire Critter";
 		Action = Standing;
 		MaxVelocity = 0.06;
-		Solid = true;
+		IsSolid = true;
 
 		nextx = X + cos(rand()) * (rand() % 10);
 		nexty = Y + sin(rand()) * (rand() % 10);
@@ -574,14 +601,14 @@ public:
 	}
 	virtual void Draw(SDL_Renderer* ren)
 	{
-		Entity::Draw(ren);
+		Entity::Draw(viewport, ren);
 		// Draw text if cursor rect intersects self rect
 		SDL_Rect curr = { cursor->X, cursor->Y, cursor->Width, cursor->Height };
 		SDL_Rect r = { X + viewport.X, Y + viewport.Y, Width * SCALE, Height * SCALE };
 
 		if (SDL_HasIntersection(&curr, &r))
 		{
-			DrawHealthBar(ren);
+			DrawHealthBar(viewport, ren);
 		}
 	}
 };
@@ -601,7 +628,7 @@ public:
 		Name = "Zombie Critter";
 		Action = Standing;
 		MaxVelocity = 0.02;
-		Solid = true;
+		IsSolid = true;
 
 		nextx = X + cos(rand()) * (rand() % 10);
 		nexty = Y + sin(rand()) * (rand() % 10);
@@ -704,14 +731,14 @@ public:
 	}
 	virtual void Draw(SDL_Renderer* ren)
 	{
-		Entity::Draw(ren);
+		Entity::Draw(viewport, ren);
 		// Draw text if cursor rect intersects self rect
 		SDL_Rect curr = { cursor->X, cursor->Y, cursor->Width, cursor->Height };
 		SDL_Rect r = { X + viewport.X, Y + viewport.Y, Width * SCALE, Height * SCALE };
 
 		if (SDL_HasIntersection(&curr, &r))
 		{
-			DrawHealthBar(ren);
+			DrawHealthBar(viewport, ren);
 		}
 	}
 };
@@ -731,7 +758,7 @@ public:
 		Name = "Big Zombie Critter";
 		Action = Standing;
 		MaxVelocity = 0.02;
-		Solid = true;
+		IsSolid = true;
 
 		nextx = X + cos(rand()) * (rand() % 10);
 		nexty = Y + sin(rand()) * (rand() % 10);
@@ -839,14 +866,14 @@ public:
 	}
 	virtual void Draw(SDL_Renderer* ren)
 	{
-		Entity::Draw(ren);
+		Entity::Draw(viewport, ren);
 		// Draw text if cursor rect intersects self rect
 		SDL_Rect curr = { cursor->X, cursor->Y, cursor->Width, cursor->Height };
 		SDL_Rect r = { X + viewport.X, Y + viewport.Y, Width * SCALE, Height * SCALE };
 
 		if (SDL_HasIntersection(&curr, &r))
 		{
-			DrawHealthBar(ren);
+			DrawHealthBar(viewport, ren);
 		}
 	}
 };
@@ -869,7 +896,7 @@ public:
 		Name = "King Critter";
 		Action = Standing;
 		MaxVelocity = 0.06;
-		Solid = true;
+		IsSolid = true;
 
 		nextx = X + cos(rand()) * (rand() % 10);
 		nexty = Y + sin(rand()) * (rand() % 10);
@@ -994,14 +1021,14 @@ public:
 	}
 	virtual void Draw(SDL_Renderer* ren)
 	{
-		Entity::Draw(ren);
+		Entity::Draw(viewport, ren);
 		// Draw text if cursor rect intersects self rect
 		SDL_Rect curr = { cursor->X, cursor->Y, cursor->Width, cursor->Height };
 		SDL_Rect r = { X + viewport.X, Y + viewport.Y, Width * SCALE, Height * SCALE };
 
 		if (SDL_HasIntersection(&curr, &r))
 		{
-			DrawHealthBar(ren);
+			DrawHealthBar(viewport, ren);
 		}
 	}
 };
@@ -1052,27 +1079,6 @@ public:
 		}
 };
 Inventory inventory;
-
-
-class BloodParticle : public
-	Entity
-{
-public:
-	BloodParticle(int x, int y)
-	{
-		X = x;
-		Y = y;
-		DeathTime = SDL_GetTicks() + rand() % 15000;
-		Fade = true;
-		Solid = false;
-	}
-
-	virtual void Draw(SDL_Renderer* ren)
-	{
-		SDL_SetRenderDrawColor(ren, 255, 0, 0, 255);
-		SDL_RenderDrawPoint(ren, X + viewport.X, Y + viewport.Y);
-	}
-};
 
 
 void LoadLevel(std::string filename)
@@ -1440,7 +1446,7 @@ void LoadLevel(std::string filename)
 					text = property.attribute("value").as_string();
 				}
 			}
-			PostMessage(text);
+			Viewport::PostMessage(&viewport, &entities, text);
 		}
 		if (name == "static_sprite")
 		{
@@ -1475,7 +1481,7 @@ void LoadLevel(std::string filename)
 			e->Y = y;
 			e->Width = w;
 			e->Height = h;
-			e->Solid = solid;
+			e->IsSolid = solid;
 			e->LoadImage(renderer, "gfx/"+sprite);
 			entities.push_back(e);
 		}
@@ -1509,7 +1515,7 @@ void LoadGame()
 	}
 	else
 	{
-		PostMessage("No saved game!");
+		Viewport::PostMessage(&viewport, &entities, "No saved game!");
 	}
 }
 
@@ -1581,20 +1587,7 @@ void ExecuteCommand(std::string command)
 	}
 }
 
-void GenerateBloodSplatter(double x, double y, double angle)
-{
-	for (int i = 0; i < rand() % 100 + 50; i++)
-	{
-		double a = rand();
-		a *= 180 / M_PI;
-		a += rand() % 30 - 15;
-		a *= M_PI / 180;
-		double nx = x + cos(angle + a) * (rand() % 50);
-		double ny = y + sin(angle + a) * (rand() % 50);
-		BloodParticle* b = new BloodParticle(nx, ny);
-		entities.push_back(b);
-	}
-}
+
 
 void Respawn()
 {
@@ -1918,7 +1911,7 @@ int main(int argc, char ** argv)
 	SDL_SetWindowFullscreen(window, FULLSCRN);
 	renderer = SDL_CreateRenderer(window, -1, 0);
 
-	player = new Player(&entities);
+	player = new Player(&solids, &entities, &keys, &viewport, renderer);
 	inventory = Inventory(player);
 	cursor = new Cursor(&entities, renderer);
 	
@@ -1942,13 +1935,13 @@ int main(int argc, char ** argv)
 	Uint32 minimum_fps_delta_time = (1000 / 30); // minimum 6 fps, if the computer is slower than this: slow down.
 	Uint32 last_game_step = SDL_GetTicks(); // initial value
 
-	TTF_Font * expfont = TTF_OpenFont("fonts/arial.ttf", 9);
+	expfont = TTF_OpenFont("fonts/arial.ttf", 9);
 	monsterfont = TTF_OpenFont("fonts/arial.ttf", 12);
-	TTF_Font* deathfont = TTF_OpenFont("fonts/lunchds.ttf", 36);
+	deathfont = TTF_OpenFont("fonts/lunchds.ttf", 36);
 	msgfont = TTF_OpenFont("fonts/biscuit.ttf", 17);
-	TTF_Font* titlefont = TTF_OpenFont("fonts/lunchds.ttf", 42);
-	TTF_Font* menufont = TTF_OpenFont("fonts/lunchds.ttf", 36);
-	TTF_Font* dmgfont = TTF_OpenFont("fonts/dmg.ttf", 36);
+	titlefont = TTF_OpenFont("fonts/lunchds.ttf", 42);
+	menufont = TTF_OpenFont("fonts/lunchds.ttf", 36);
+	dmgfont = TTF_OpenFont("fonts/dmg.ttf", 36);
 
 	SDL_StartTextInput();
 	while (!quit)
@@ -2027,7 +2020,7 @@ int main(int argc, char ** argv)
 						// Draw bullet from player to cursor
 						int x, y;
 						SDL_GetMouseState(&x, &y);
-						Bullet* bl = new Bullet(&entities, atan2(player->Y + viewport.Y - y, player->X + viewport.X - x) + M_PI);
+						Bullet* bl = new Bullet(&viewport, player, &solids, renderer, &entities, atan2(player->Y + viewport.Y - y, player->X + viewport.X - x) + M_PI);
 						bl->LoadImage(renderer, "gfx/" + (std::string)"bullet.bmp");
 						bl->X = player->X;
 						bl->Y = player->Y;
@@ -2161,13 +2154,13 @@ int main(int argc, char ** argv)
 							}
 						}
 						// Check against every and entity
-						if (entities[i]->Solid)
+						if (entities[i]->IsSolid)
 						{
 							for (int j = 0; j < entities.size(); j++)
 							{
 								if (entities[j]->id == "player") continue;
 								if (i == j) continue;
-								if (!entities[j]->Solid) continue;
+								if (!entities[j]->IsSolid) continue;
 
 								SDL_Rect a = { entities[i]->X, entities[i]->Y, entities[i]->Width * entities[i]->SCALE, entities[i]->Height * entities[i]->SCALE };
 								SDL_Rect b = { entities[j]->X, entities[j]->Y, entities[j]->Width * entities[j]->SCALE, entities[j]->Height * entities[j]->SCALE };
@@ -2246,7 +2239,7 @@ int main(int argc, char ** argv)
 							}
 						}
 					}
-					entities[i]->Draw(renderer);
+					entities[i]->Draw(viewport, renderer);
 				}
 				
 			}
@@ -2466,6 +2459,7 @@ int main(int argc, char ** argv)
 	}
 
 	// cleanup SDL
+	delete(keys);
 	ClearEntities();
 	SDL_DestroyTexture(tex_tilesheet);
 

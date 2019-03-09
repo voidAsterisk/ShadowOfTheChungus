@@ -1,6 +1,9 @@
 #pragma once
 #include <string>
 #include <SDL.h>
+#include <vector>
+
+class Viewport;
 
 enum EntityAction
 {
@@ -46,7 +49,7 @@ public:
 	double Z = 0;
 	int Alpha = 255;
 	bool Fade = false;
-	bool Solid = false;
+	bool IsSolid = false;
 	int DeathTime = -1;
 	int Level = -1;
 	int Respawn = false;
@@ -81,8 +84,8 @@ public:
 	~Entity();
 	virtual void LoadImage(SDL_Renderer* ren, std::string img);
 	virtual void Update(double dt);
-	virtual void Draw(SDL_Renderer* ren);
-	virtual void DrawHealthBar(SDL_Renderer* ren);
+	virtual void Draw(Viewport viewport, SDL_Renderer* ren);
+	virtual void DrawHealthBar(Viewport viewport, SDL_Renderer* ren);
 	virtual int ExperienceDrop();
 	virtual void OnClick();
 	SDL_Texture* LoadTexture(SDL_Renderer* ren, std::string img);

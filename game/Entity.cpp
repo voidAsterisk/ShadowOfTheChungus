@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "Entity.h"
 
+#include "Viewport.h"
+
 Entity::Entity()
 {
 }
@@ -37,7 +39,7 @@ void Entity::Update(double dt)
 	}
 }
 
-void Entity::Draw(SDL_Renderer* ren)
+void Entity::Draw(Viewport viewport, SDL_Renderer* ren)
 {
 	if (Texture != nullptr) {
 		SDL_Rect srcrect = { (int)AnimationX * Width, (int)AnimationY * Height, Width, Height };
@@ -48,7 +50,7 @@ void Entity::Draw(SDL_Renderer* ren)
 	}
 }
 
-void Entity::DrawHealthBar(SDL_Renderer* ren)
+void Entity::DrawHealthBar(Viewport viewport, SDL_Renderer* ren)
 {
 	// Draw health bar
 	int h = 2 * SCALE;

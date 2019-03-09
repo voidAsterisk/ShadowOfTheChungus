@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "Cursor.h"
-#include "Entity.h"
+
+
+
 
 Cursor::Cursor(std::vector<Entity*>* ents, SDL_Renderer* ren)
 {
