@@ -2004,6 +2004,7 @@ OptionsMenu optionsmenu;
 
 int main(int argc, char ** argv)
 {
+	
 	// Set flags
 	flags[""] = false;
 	flags["holy_grail_full"] = false;
@@ -2049,20 +2050,17 @@ int main(int argc, char ** argv)
 	mainContext = SDL_GL_CreateContext(window);
 	SDL_GL_MakeCurrent(window, mainContext);
 	glewInit();
-	glClearColor(0, 0, 0, 0);
-	glClearDepth(1.0f);                   // Set background depth to farthest
+	glClearColor(0, 1, 0, 0);
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	glOrtho(0, SCRW, 0, SCRH, 0.1f, 100.0f);
+
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_CULL_FACE);
-	glEnable(GL_BLEND);
-	glDepthFunc(GL_LESS);
-	glDepthRange(0.0f, 1.0f);
-
+	glDepthFunc(GL_LEQUAL);
+	glViewport(0, 0, SCRW, SCRH);
+	SDL_GL_SwapWindow(window);
 	sfx_warp = Mix_LoadWAV("sfx/warp.wav");
 	sfx_saveload = Mix_LoadWAV("sfx/saveload.wav");
 
@@ -2244,9 +2242,11 @@ int main(int argc, char ** argv)
 			///SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 			//SDL_RenderClear(renderer);
 			
-			glClearColor(0, 0, 0, 0);
+			glClearColor(0, 0, 0, 1);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			
+			//glMatrixMode(GL_MODELVIEW);
+			/glLoadIdentity();
+			glColor4f(1, 1, 1, 1);
 			//SDL_GL_SwapWindow(window);
 
 			// Pointer modes
@@ -2750,21 +2750,6 @@ int main(int argc, char ** argv)
 				}
 			}
 			entities = ents;
-			
-			static float r = 0;
-			r += 0.1f;
-			
-		
-			glMatrixMode(GL_MODELVIEW);
-			glPushMatrix();
-			glRotatef(r, 0, 1, 0);
-			glBegin(GL_TRIANGLES);
-			glVertex3f(0, 0, 0);
-			glVertex3f(100, 0, 0);
-			glVertex3f(100, 100, 0);
-			glEnd();
-			glPopMatrix();
-		
 
 			SDL_RenderPresent(renderer);
 
