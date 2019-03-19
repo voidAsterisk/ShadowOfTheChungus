@@ -2,7 +2,6 @@
 #include <vector>
 #include <SDL_ttf.h>
 #include "Entity.h"
-
 class Viewport;
 class ScreenMessage : public
 	Entity
@@ -14,12 +13,13 @@ public:
 	bool Background = true;
 	bool Relative = false;
 	bool DrawMiddle = false;
-	ScreenMessage(Viewport* viewport, std::vector<Entity*>* ents, std::string msg, TTF_Font* font);
+	std::string TakeItems = "none";
+	ScreenMessage(Viewport* viewport, std::vector<Entity*>* ents, std::string msg);
 
-	ScreenMessage(Viewport* viewport, std::vector<Entity*>* ents, bool drawmid, bool bg, bool relative, int dieafter, double x, double y, std::string msg, TTF_Font* font);
+	ScreenMessage(Viewport* viewport, std::vector<Entity*>* ents, bool drawmid, bool bg, bool relative, int dieafter, double x, double y, std::string msg);
 	~ScreenMessage();
 
 	virtual void Update(double dt);
 
-	virtual void Draw(SDL_Renderer* ren);
+	virtual void Draw(Viewport viewport, SDL_Renderer* ren);
 };

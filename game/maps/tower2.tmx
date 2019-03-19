@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.2" tiledversion="1.2.2" orientation="orthogonal" renderorder="right-down" width="100" height="100" tilewidth="32" tileheight="32" infinite="1" nextlayerid="3" nextobjectid="33">
+<map version="1.2" tiledversion="1.2.2" orientation="orthogonal" renderorder="right-down" width="100" height="100" tilewidth="32" tileheight="32" infinite="1" nextlayerid="3" nextobjectid="36">
  <tileset firstgid="1" source="../tilesheet.tsx"/>
  <layer id="1" name="Tile Layer 1" width="100" height="100">
   <data encoding="csv">
@@ -13,7 +13,7 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,14,14,14,14,14,14,14,14,14,14,14,14,
 0,0,0,0,14,14,14,14,14,14,14,14,14,14,14,14,
 0,0,0,0,14,16,16,16,16,16,16,16,16,16,16,16,
 0,0,0,0,14,16,16,16,16,16,16,16,16,16,16,16,
@@ -31,7 +31,7 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+14,14,14,14,14,14,14,14,14,14,14,14,14,0,0,0,
 9,14,14,14,14,14,14,14,14,14,14,14,14,0,0,0,
 16,16,16,16,16,16,16,16,16,16,16,16,14,0,0,0,
 16,16,16,16,16,16,16,16,16,16,16,16,14,0,0,0,
@@ -138,42 +138,22 @@
     <property name="warp_id" type="int" value="1"/>
    </properties>
   </object>
-  <object id="20" name="fire_critter" x="-61" y="-441">
-   <point/>
-  </object>
-  <object id="21" name="fire_critter" x="230" y="-221">
-   <point/>
-  </object>
-  <object id="23" name="fire_critter" x="-169" y="-316">
-   <point/>
-  </object>
-  <object id="24" name="fire_critter" x="87" y="-355">
-   <point/>
-  </object>
-  <object id="25" name="fire_critter" x="205" y="-411">
-   <point/>
-  </object>
-  <object id="26" name="fire_critter" x="296" y="-530">
-   <point/>
-  </object>
-  <object id="27" name="fire_critter" x="101" y="-563">
-   <point/>
-  </object>
-  <object id="28" name="fire_critter" x="-239" y="-172">
-   <point/>
-  </object>
-  <object id="29" name="fire_critter" x="11" y="-155">
-   <point/>
-  </object>
-  <object id="30" name="fire_critter" x="271" y="-99">
-   <point/>
-  </object>
-  <object id="31" name="fire_critter" x="-257" y="-573">
-   <point/>
-  </object>
   <object id="32" name="info_message" x="64" y="96">
    <properties>
     <property name="text" value="Thor's tower level 2"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="34" name="spawn" x="-288" y="-608" width="608" height="544">
+   <properties>
+    <property name="number" type="int" value="10"/>
+    <property name="spawn_id" value="big_zombie_critter"/>
+   </properties>
+  </object>
+  <object id="35" name="info_flag" x="128" y="96">
+   <properties>
+    <property name="flag" value="save_enabled"/>
+    <property name="value" type="bool" value="false"/>
    </properties>
    <point/>
   </object>

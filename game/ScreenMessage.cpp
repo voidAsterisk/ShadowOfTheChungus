@@ -2,28 +2,29 @@
 #include "ScreenMessage.h"
 
 #include "Viewport.h"
+#include <iostream>
 
-ScreenMessage::ScreenMessage(Viewport* viewport, std::vector<Entity*>* ents, std::string msg, TTF_Font* font)
+ScreenMessage::ScreenMessage(Viewport* viewport, std::vector<Entity*>* ents, std::string msg) :
+	Entity(ents)
 {
-	Entity::Entity(ents);
+	Font = TTF_OpenFont("fonts/biscuit.ttf", 17);
 	vp = viewport;
 	Message = msg;
 	DeathTime = SDL_GetTicks() + 5000;
 	X = 50;
 	Y = vp->Height - 50;
-	Font = font;
 	Fade = true;
 	Z = 1;
 }
-ScreenMessage::ScreenMessage(Viewport* viewport, std::vector<Entity*>* ents, bool drawmid, bool bg, bool relative, int dieafter, double x, double y, std::string msg, TTF_Font* font)
+ScreenMessage::ScreenMessage(Viewport* viewport, std::vector<Entity*>* ents, bool drawmid, bool bg, bool relative, int dieafter, double x, double y, std::string msg) :
+	Entity(ents)
 {
-	Entity::Entity(ents);
+	Font = TTF_OpenFont("fonts/biscuit.ttf", 17);
 	vp = viewport;
 	Message = msg;
 	DeathTime = SDL_GetTicks() + dieafter;
 	X = x;
 	Y = y;
-	Font = font;
 	Fade = true;
 	Background = bg;
 	DrawMiddle = drawmid;
@@ -41,10 +42,11 @@ void ScreenMessage::Update(double dt)
 	Y -= 0.01f * dt;
 }
 
-void ScreenMessage::Draw(SDL_Renderer* ren)
+void ScreenMessage::Draw(Viewport viewport, SDL_Renderer* ren)
 {
 	SDL_Surface * s = TTF_RenderText_Solid(Font,
 		Message.c_str(), { 255, 255, 255 });
+
 	int w = s->w;
 	int h = s->h;
 	SDL_Rect expr;

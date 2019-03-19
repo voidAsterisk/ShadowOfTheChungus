@@ -11,7 +11,8 @@ enum EntityAction
 	Moving,
 	Aggro,
 	Attacking,
-	Dead
+	Dead,
+	Dashing
 };
 class KillID
 {
@@ -44,6 +45,10 @@ public:
 	std::vector<Entity*>* EntityListPointer;
 	int SCALE = 2;
 	bool Alive = true;
+	bool Flammable = false;
+	bool OnFire = false;
+	bool BloodSplatter = true;
+
 	double X = 0;
 	double Y = 0;
 	double Z = 0;
@@ -68,6 +73,7 @@ public:
 	double AggroDistance = -1;
 	double Health = 1;
 	double MaxHealth = 1;
+	std::string OnDieFuncName = "";
 	KillID killID;
 
 	double AnimationX = 0;
@@ -89,4 +95,7 @@ public:
 	virtual int ExperienceDrop();
 	virtual void OnClick();
 	SDL_Texture* LoadTexture(SDL_Renderer* ren, std::string img);
+	bool lineLine(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4);
+	bool lineRect(float x1, float y1, float x2, float y2, float rx, float ry, float rw, float rh);
+	void GenerateBloodSplatter(Viewport* viewport, double x, double y, double angle);
 };

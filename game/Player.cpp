@@ -4,11 +4,14 @@
 #include "Bullet.h"
 #include "HeldItem.h"
 #include "Viewport.h"
-#include "Solid.h"
+#include "Solid.h" 
+#include "Cursor.h"
+#include <iostream>
 
-Player::Player(std::vector<Solid>* solids, std::vector<Entity*>* ents, bool** keys, Viewport* viewport, SDL_Renderer* renderer)
+Player::Player(Cursor* cursor, std::vector<Solid>* solids, std::vector<Entity*>* ents, std::map<int, bool>* keys, Viewport* viewport, SDL_Renderer* renderer) :
+	Entity(ents)
 {
-	Entity::Entity(ents);
+	c = cursor;
 	s = solids;
 	ren = renderer;
 	v = viewport;
@@ -22,10 +25,17 @@ Player::Player(std::vector<Solid>* solids, std::vector<Entity*>* ents, bool** ke
 
 	Health = MaxHealth = 10;
 	NextAttack = -1;
+	SprintVelocity = MaxVelocity * 1.3;
+
+	sfx_shoot = Mix_LoadWAV("sfx/shoot.wav");
+	std::cout << SDL_GetError();
+	sfx_shotgun = Mix_LoadWAV("sfx/shotgun.wav");
 }
 
 Player::~Player()
 {
+	Mix_FreeChunk(sfx_shotgun);
+	Mix_FreeChunk(sfx_shoot);
 }
 
 void Player::FireBullet()
@@ -39,6 +49,44 @@ void Player::FireBullet()
 	bl->X = nx;
 	bl->Y = ny;
 	EntityListPointer->push_back(bl);
+	Mix_VolumeChunk(sfx_shoot, MIX_MAX_VOLUME * ((rand() % 5) * 0.1f + 0.4f));
+	Mix_PlayChannel(-1, sfx_shoot, 0);
+}
+
+void Player::FireUzi()
+{
+	int x, y;
+	SDL_GetMouseState(&x, &y);
+	double nx = X + Width * SCALE / 2;
+	double ny = Y + Height * SCALE / 2;
+	Bullet* bl = new Bullet(v, this, s, ren, EntityListPointer, atan2(ny + v->Y - y, nx + v->X - x) + M_PI + (rand() % 10 - 5)*M_PI / 180.0f);
+	bl->LoadImage(ren, "gfx/" + (std::string)"bullet.bmp");
+	bl->X = nx;
+	bl->Y = ny;
+	bl->DeathTime = SDL_GetTicks() + 40;
+	EntityListPointer->push_back(bl);
+	Mix_PlayChannel(-1, sfx_shoot, 0);
+}
+
+void Player::FireShotgun()
+{
+	int x, y;
+	SDL_GetMouseState(&x, &y);
+	int nx;
+	int ny;
+	for (int i = 0; i < 6; i++)
+	{
+		nx = X + Width * SCALE / 2;
+		ny = Y + Height * SCALE / 2;
+		Bullet* bl = new Bullet(v, this, s, ren, EntityListPointer, atan2(ny + v->Y - y, nx + v->X - x) + M_PI + (rand() % 30 - 15)*M_PI/180.0f);
+		bl->LoadImage(ren, "gfx/" + (std::string)"bullet.bmp");
+		bl->X = nx;
+		bl->Y = ny;
+		bl->DeathTime = SDL_GetTicks() + 20;
+		EntityListPointer->push_back(bl);
+	}
+	
+	Mix_PlayChannel(-1, sfx_shotgun, 0);
 }
 
 std::string Player::GetSelectedItemId()
@@ -49,8 +97,9 @@ std::string Player::GetSelectedItemId()
 		return Inventory[SelectedItem].Id;
 }
 
-void Player::AddItem(HeldItem item)
+void Player::AddItem(HeldItem item, int count)
 {
+	
 	if (SelectedItem == -1) SelectedItem = 0;
 
 	for (int i = 0; i < Inventory.size(); i++)
@@ -62,6 +111,27 @@ void Player::AddItem(HeldItem item)
 		}
 	}
 	Inventory.push_back(item);
+	Inventory[Inventory.size() - 1].Count = count;
+	if (Inventory.size() == 1) SelectedItem = 0;
+}
+void Player::RemoveItem(std::string item_id)
+{
+	for (int i = 0; Inventory.size(); i++)
+	{
+		if (Inventory[i].Id == item_id)
+		{
+			Inventory[i].Count--;
+			if (Inventory[i].Count <= 0)
+			{
+				Inventory.erase(Inventory.begin() + i);
+				if (SelectedItem == i)
+					SelectedItem -= 1;
+				if (SelectedItem < 0)
+					SelectedItem = Inventory.size() - 1;
+				return;
+			}
+		}
+	}
 }
 
 int Player::HasItem(std::string itemid)
@@ -75,18 +145,23 @@ int Player::HasItem(std::string itemid)
 	}
 	return 0;
 }
-
 void Player::Update(double dt)
 {
-	bool moving = false;
+	moving = false;
+
+	double vel = MaxVelocity;
+	if ((*k)[SDLK_LSHIFT])
+		vel = SprintVelocity;
+
+
 	if ((*k)[SDLK_w])
 	{
-		VelocityY = -MaxVelocity;
+		VelocityY = -vel;
 		moving = true;
 	}
 	else if ((*k)[SDLK_s])
 	{
-		VelocityY = MaxVelocity;
+		VelocityY = vel;
 		moving = true;
 	}
 	else
@@ -95,12 +170,12 @@ void Player::Update(double dt)
 
 	if ((*k)[SDLK_a])
 	{
-		VelocityX = -MaxVelocity;
+		VelocityX = -vel;
 		moving = true;
 	}
 	else if ((*k)[SDLK_d])
 	{
-		VelocityX = MaxVelocity;
+		VelocityX = vel;
 		moving = true;
 	}
 	else
@@ -124,8 +199,8 @@ void Player::Update(double dt)
 	// Draw bullet from player to cursor
 	if (SDL_GetTicks() >= NextAttack && NextAttack != -1)
 	{
-		FireBullet();
+		FireUzi();
 		if (Inventory[SelectedItem].Id == "uzi")
-			NextAttack = SDL_GetTicks() + 100;
+			NextAttack = SDL_GetTicks() + 120;
 	}
 }

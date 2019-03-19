@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.2" tiledversion="1.2.2" orientation="orthogonal" renderorder="right-down" width="100" height="100" tilewidth="32" tileheight="32" infinite="1" nextlayerid="3" nextobjectid="62">
+<map version="1.2" tiledversion="1.2.2" orientation="orthogonal" renderorder="right-down" width="100" height="100" tilewidth="32" tileheight="32" infinite="1" nextlayerid="3" nextobjectid="63">
  <tileset firstgid="1" source="../tilesheet.tsx"/>
  <layer id="1" name="Tile Layer 1" width="100" height="100">
   <data encoding="csv">
@@ -13,7 +13,7 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,14,14,14,14,14,14,14,14,14,14,14,14,
 0,0,0,0,14,14,14,14,14,14,14,14,14,14,14,14,
 0,0,0,0,14,33,33,33,33,33,33,33,33,33,33,33,
 0,0,0,0,14,33,33,33,33,33,33,33,33,33,33,33,
@@ -31,7 +31,7 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+14,14,14,14,14,14,14,14,14,14,14,14,14,0,0,0,
 14,14,14,14,14,14,14,14,14,14,14,14,14,0,0,0,
 33,33,33,33,33,33,33,33,33,33,33,33,14,0,0,0,
 33,33,33,33,33,33,33,33,33,33,33,33,14,0,0,0,
@@ -139,7 +139,9 @@
   </object>
   <object id="59" name="npc" x="0" y="-384">
    <properties>
+    <property name="alt_dialog" value="Now you can enter the lava cave!"/>
     <property name="dialog" value="I am going into retirement. You can have my hammer."/>
+    <property name="dialog_item" value="thor_hammer"/>
     <property name="height" type="int" value="17"/>
     <property name="name" value="Thor"/>
     <property name="sprite" value="thor.bmp"/>
@@ -156,6 +158,13 @@
   <object id="61" name="info_message" x="64" y="128">
    <properties>
     <property name="text" value="Thor's tower floor 3"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="62" name="info_flag" x="96" y="128">
+   <properties>
+    <property name="flag" value="save_enabled"/>
+    <property name="value" type="bool" value="true"/>
    </properties>
    <point/>
   </object>

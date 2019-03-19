@@ -7,10 +7,9 @@ class Viewport;
 class BloodParticle : public
 	Entity
 {
-	Viewport* viewport;
 public:
-	BloodParticle(Viewport* vp, int x, int y);
+	BloodParticle(int x, int y);
 	~BloodParticle();
 
-	virtual void Draw(SDL_Renderer* ren);
+	virtual void Draw(Viewport v, SDL_Renderer* ren);
 };

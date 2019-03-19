@@ -2,6 +2,8 @@
 #include "Entity.h"
 
 #include "Viewport.h"
+#include "BloodParticle.h"
+#include <iostream>
 
 Entity::Entity()
 {
@@ -16,7 +18,7 @@ Entity::Entity(std::vector<Entity*>* ents)
 Entity::~Entity()
 {
 	if (Image != nullptr)
-		SDL_FreeSurface(Image);
+ 		SDL_FreeSurface(Image);
 	if (Texture != nullptr)
 		SDL_DestroyTexture(Texture);
 }
@@ -89,9 +91,51 @@ SDL_Texture* Entity::LoadTexture(SDL_Renderer* ren, std::string img)
 	return tex;
 }
 
-struct Vec2
-{
-	double x;
-	double y;
-};
+bool Entity::lineLine(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4) {
 
+	// calculate the direction of the lines
+	float uA = ((x4 - x3)*(y1 - y3) - (y4 - y3)*(x1 - x3)) / ((y4 - y3)*(x2 - x1) - (x4 - x3)*(y2 - y1));
+	float uB = ((x2 - x1)*(y1 - y3) - (y2 - y1)*(x1 - x3)) / ((y4 - y3)*(x2 - x1) - (x4 - x3)*(y2 - y1));
+
+	// if uA and uB are between 0-1, lines are colliding
+	if (uA >= 0 && uA <= 1 && uB >= 0 && uB <= 1) {
+
+		// optionally, draw a circle where the lines meet
+		float intersectionX = x1 + (uA * (x2 - x1));
+		float intersectionY = y1 + (uA * (y2 - y1));
+		return true;
+	}
+	return false;
+}
+
+bool Entity::lineRect(float x1, float y1, float x2, float y2, float rx, float ry, float rw, float rh) {
+
+	// check if the line has hit any of the rectangle's sides
+	// uses the Line/Line function below
+	bool left = lineLine(x1, y1, x2, y2, rx, ry, rx, ry + rh);
+	bool right = lineLine(x1, y1, x2, y2, rx + rw, ry, rx + rw, ry + rh);
+	bool top = lineLine(x1, y1, x2, y2, rx, ry, rx + rw, ry);
+	bool bottom = lineLine(x1, y1, x2, y2, rx, ry + rh, rx + rw, ry + rh);
+
+	// if ANY of the above are true, the line
+	// has hit the rectangle
+	if (left || right || top || bottom) {
+		return true;
+	}
+	return false;
+}
+
+void Entity::GenerateBloodSplatter(Viewport* viewport, double x, double y, double angle)
+{
+	for (int i = 0; i < rand() % 100 + 50; i++)
+	{
+		double a = rand();
+		a *= 180 / M_PI;
+		a += rand() % 30 - 15;
+		a *= M_PI / 180;
+		double nx = x + cos(angle + a) * (rand() % 50);
+		double ny = y + sin(angle + a) * (rand() % 50);
+		BloodParticle* b = new BloodParticle(nx, ny);
+		EntityListPointer->push_back(b);
+	}
+}

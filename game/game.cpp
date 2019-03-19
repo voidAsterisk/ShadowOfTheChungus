@@ -1,6 +1,8 @@
-#include "pch.h"
+﻿#include "pch.h"
 
 #include <SDL.h>
+#include <GL/glew.h>
+#include <glm/gtc/matrix_transform.hpp>
 #include <SDL_ttf.h>
 #include <string>
 #include <stdlib.h>
@@ -15,8 +17,8 @@
 #include <algorithm>
 #include<array>
 #include <math.h>
+#include <map>
 #include <boost/tokenizer.hpp>
-#include "Funcs.h"
 #include "Entity.h"
 #include "Cursor.h"
 #include "Console.h"
@@ -26,26 +28,65 @@
 #include "Bullet.h"
 #include "Solid.h"
 #include "BloodParticle.h"
-#include "Fonts.h"
 #include "Viewport.h"
-
+#include "Item.h"
+#include "NPC.h"
+#include "Trigger.h"
+#include "MouseState.h"
+#include "Gate.h"
+#include "SkullKey.h"
+#include "MinorHealth.h"
+#include "MaximumHealth.h"
+#include "Chunk.h"
+#include "Fireball.h"
+#include "ShadedArea.h"
+#include "Shader.h"
+#include "Chungus.h"
 #pragma comment (lib, "SDL2")
 #pragma comment (lib, "SDL2_ttf")
+#pragma comment (lib, "glew32")
+#pragma comment (lib, "glu32")
+#pragma comment (lib, "opengl32")
+#pragma comment (lib, "libfbxsdk-md")
+Cursor* cursor;
+
+SDL_GLContext mainContext;
+
+
+TTF_Font * expfont;
+TTF_Font* deathfont;
+TTF_Font* titlefont;
+TTF_Font* menufont;
+TTF_Font* dmgfont;
+TTF_Font* monsterfont;
+TTF_Font* msgfont;
 
 std::vector<SDL_Rect> hurt;
+std::vector<SDL_Rect> heal;
 std::vector<KillID> killedmapid = std::vector<KillID>();
 std::vector<Warp> warps;
 std::vector<Entity*> entities;
 std::vector<Solid> solids;
+std::vector<Trigger> triggers;
+std::vector<ShadedArea> shadedareas;
 Console cons;
+
+std::map<std::string, bool> flags;
+std::map<std::string, SDL_Texture*> textures;
+
+Mix_Chunk* sfx_warp;
+Mix_Chunk* sfx_saveload;
+Mix_Chunk* sfx_savefailed;
 
 static int SCALE = 2;
 static int SCRW = 1280;
 static int SCRH = 720;
-static bool FULLSCRN = true;
-static bool* keys = new bool[1024];
+static bool FULLSCRN = false;
+static bool VSYNC = false;
+std::string GAMENAME = "Sasha";
+static std::map<int, bool> keys;
 static SDL_Renderer* renderer;
-static Viewport viewport = Viewport(0, 0, SCRW, SCRH);
+static Viewport viewport;
 static bool quit = false;
 static std::string currentmap;
 static Player* player;
@@ -62,15 +103,6 @@ enum GameStates {
 };
 static GameStates gamestate = TitleMenu;
 static GameStates lastgamestate;
-
-class MouseState
-{
-public:
-	int X;
-	int Y;
-	int LeftDown;
-	int RightDown;
-};
 static MouseState currentmousestate, previousmousestate;
 
 void SetGameState(GameStates gs);
@@ -93,123 +125,6 @@ void ClearEntities()
 }
 
 
-Cursor* cursor;
-
-
-
-class Item : public
-	Entity
-{
-public:
-	std::string Name;
-	std::string Id;
-	Item()
-	{
-
-	}
-	Item(double x, double y, std::string name, std::string id)
-	{
-		X = x;
-		Y = y;
-		Name = name;
-		Id = id;
-		Respawn = false;
-		IsSolid = false;
-	}
-
-	virtual void Update(double dt)
-	{
-		// If players feet touches item
-		SDL_Point p = { player->X + player->Width * SCALE / 2, player->Y + player->Height * SCALE};
-		SDL_Rect r = { X, Y, Width * SCALE, Height * SCALE };
-
-		if (SDL_PointInRect(&p, &r))
-		{
-			Alive = false;
-			HeldItem it = HeldItem(Name, Id);
-			player->AddItem(it);
-			Viewport::PostMessage(&viewport, &entities, (std::string)"Obtained " + Name + "!");
-		}
-	}
-};
-
-class MinorHealth : public
-	Entity
-{
-public:
-	MinorHealth(double x, double y, std::string name)
-	{
-		X = x;
-		Y = y;
-		Name = name;
-		IsSolid = false;
-	}
-
-	virtual void Update(double dt)
-	{
-		// If players feet touches item
-		SDL_Point p = { player->X + player->Width * SCALE / 2, player->Y + player->Height * SCALE };
-		SDL_Rect r = { X, Y, Width * SCALE, Height * SCALE };
-
-		if (SDL_PointInRect(&p, &r) && player->Health != player->MaxHealth)
-		{
-			this->Alive = false;
-			player->AddHealth(player->MaxHealth * 0.2f);
-		}
-	}
-};
-class MaximumHealth : public
-	Entity
-{
-public:
-	MaximumHealth(double x, double y, std::string name)
-	{
-		X = x;
-		Y = y;
-		Name = name;
-		IsSolid = false;
-	}
-
-	virtual void Update(double dt)
-	{
-		// If players feet touches item
-		SDL_Point p = { player->X + player->Width * SCALE / 2, player->Y + player->Height * SCALE };
-		SDL_Rect r = { X, Y, Width * SCALE, Height * SCALE };
-
-		if (SDL_PointInRect(&p, &r) && player->Health != player->MaxHealth)
-		{
-			this->Alive = false;
-			player->Health = player->MaxHealth;
-		}
-	}
-};
-class Chunk
-{
-public:
-	int X;
-	int Y;
-	int Width;
-	int Height;
-	int** Data;
-
-	Chunk(int x, int y, int w, int h)
-	{
-		X = x;
-		Y = y;
-		Width = w;
-		Height = h;
-		Data = new int*[w];
-		for (int i = 0; i < w; i++)
-		{
-			Data[i] = new int[h];
-		}
-	}
-	~Chunk()
-	{
-		for (int i = 0; i < Width; i++)
-				delete(Data[i]);
-	}
-};
 std::vector<Chunk*> chunks;
 
 void ClearChunks()
@@ -221,269 +136,210 @@ void ClearChunks()
 	}
 	chunks.clear();
 }
-class NPC : public
-	Entity
-{
-public:
-	std::string Dialog;
 
-	NPC(double x, double y)
-	{
-		id = "npc";
-		X = x;
-		Y = y;
-		Width = 7;
-		Height = 16;
-	}
 
-	void OnClick()
-	{
-		Viewport::PostMessage(&viewport, &entities, "[" + Name + "] " + Dialog);
-	}
 
-	virtual void Draw(SDL_Renderer* ren)
-	{
-		Entity::Draw(viewport, ren);
 
-		// Draw text if cursor rect intersects self rect
-		SDL_Rect curr = { cursor->X, cursor->Y, cursor->Width, cursor->Height };
-		SDL_Rect r = { X + viewport.X, Y + viewport.Y, Width * SCALE, Height * SCALE };
-
-		if (SDL_HasIntersection(&curr, &r))
-		{
-			// Draw level and name
-			SDL_Surface * s = TTF_RenderText_Solid(monsterfont,
-				Name.c_str(), { 255, 255, 255 });
-			int w = s->w;
-			int h = s->h;
-			SDL_Rect r = { X + viewport.X + Width * SCALE / 2 - w / 2, Y + viewport.Y - h*1.5f, w, h };
-			SDL_Texture* t = SDL_CreateTextureFromSurface(renderer, s);
-			SDL_FreeSurface(s);
-			SDL_SetRenderDrawColor(ren, 0, 0, 0, 255);
-			SDL_RenderFillRect(ren, &r);
-			SDL_RenderCopy(renderer, t, NULL, &r);
-			SDL_DestroyTexture(t);
-		}
-	}
-};
-
-class DustParticle : public Entity
-{
-public:
-	double baseX;
-	double baseY;
-	int AddExp = 1;
-	
-	DustParticle(int exp, double bX, double bY)
-	{
-		id = "dustparticle";
-		AddExp = exp;
-		baseX = bX;
-		baseY = bY + sin(rand()) * 5;
-		VelocityX = (rand() % 50 - 25) * 0.01f;
-		VelocityY = (rand() % 50 + 50) * 0.01f;
-		MaxVelocity = 1;
-
-		Width = 3;
-		Height = 3;
-	}
-	virtual void Update(double dt)
-	{
-		VelocityY += 0.006;
-		if (Y > baseY)
-		{
-			Y = baseY;
-			VelocityY = -VelocityY /2;
-
-			if (abs(VelocityX) > 0.0001f)
-			{
-				VelocityX *= 0.8f;
-			}
-			else
-			{
-				VelocityX = 0;
-			}
-			if (abs(VelocityY) < 0.01f)
-			{
-				VelocityY = 0;
-			}
-		}
-		X += VelocityX;
-		Y += VelocityY;
-
-			SDL_Rect a = { player->X, player->Y, player->Width * SCALE, player->Height * SCALE };
-			SDL_Rect b = { X, Y, Width * SCALE, Height * SCALE };
-			SDL_Rect r;
-			if (SDL_IntersectRect(&a, &b, &r))
-			{
-				Alive = false;
-				
-			}
-	}
-};
-
-class Fireball :
+class Enemy :
 	public Entity
 {
-public:
-	double DestX;
-	double DestY;
-
-	Fireball(std::vector<Entity*>* ents, double x, double y, double destX, double destY)
-	{
-		Entity::Entity(ents);
-		X = x;
-		Y = y;
-		DestX = destX;
-		DestY = destY;
-		MaxVelocity = 0.1;
-
-		Width = 8;
-		Height = 8;
-
-		IsSolid = false;
-	}
-
-	virtual void Update(double dt)
-	{
-		double dx = DestX - Width * SCALE / 2 - X;
-		double dy = DestY - Height * SCALE / 2 - Y;
-
-		float length = sqrtf(dx*dx + dy * dy);
-
-		if (length <= 1)
-		{
-			Alive = false;
-
-			// Spawn shot decal
-			Entity* d = new Entity(&entities);
-			d->X = X;
-			d->Y = Y;
-			d->Width = 5;
-			d->Height = 4;
-			d->Fade = true;
-			d->LoadImage(renderer, "gfx/" + (std::string)"shotdecal.bmp");
-			d->IsSolid = false;
-			d->DeathTime = SDL_GetTicks() + 10000;
-			entities.push_back(d);
-			return;
-		}
-
-		dx /= length;
-		dy /= length;
-		X += dx * dt * MaxVelocity;
-		Y += dy * dt * MaxVelocity;
-
-		// If collides with player
-		SDL_Rect pr = { player->X, player->Y, player->Width*SCALE, player->Height*SCALE };
-		SDL_Rect r = { X, Y, Width *SCALE, Height * SCALE };
-
-		if (SDL_HasIntersection(&pr, &r))
-		{
-			Alive = false;
-			player->Health -= AttackDamage;
-		}
-
-		// Check for collisions against solids
-		for (unsigned int i = 0; i < solids.size(); i++)
-		{
-			if (SDL_HasIntersection(&r, &solids[i].Rect))
-			{
-				Alive = false;
-				return;
-
-			}
-		}
-	}
-};
-
-
-class Critter : public Entity
-{
+	bool OnDieExecuted = false;
+	bool lineofsightbroken = false;
+protected:
 	int nextx;
 	int nexty;
 	int nextmove;
+	bool Wander;
+	int NextMoveMin;
+	int NextMoveMax;
+	bool IsAggro;
+	double DistToPlayer;
+
+	Player* p;
+	std::vector<Solid>* s;
 public:
-	Critter(double x, double y)
+	Enemy(std::vector<Solid>* solids, Player* player)
+	{
+		s = solids;
+		p = player;
+		id = "enemy";
+		Level = 1;
+		Name = "Enemy";
+		Action = Standing;
+		IsSolid = true;
+		Wander = true;
+		IsAggro = false;
+		MaxVelocity = 0.02;
+		NextMoveMin = 5000;
+		NextMoveMax = 10000;
+		AttackTimeout = 2500;
+		AggroDistance = 15000;
+		AttackDistance = 600;
+		GetNextMove(NextMoveMin, NextMoveMax);
+	}
+	~Enemy() {}
+
+	virtual void Update(double dt)
+	{
+		int x = X;
+		int y = Y;
+		int x2 = player->X;
+		int y2 = player->Y;
+		lineofsightbroken = false;
+		for (int i = 0; i < s->size(); i++)
+		{
+			if (SDL_IntersectRectAndLine(&((*s)[i].Rect), &x, &y, &x2, &y2))
+			{
+				lineofsightbroken = true;
+			}
+		}
+
+		if (Action != Dead)
+		{
+			double px = player->X + player->Width * SCALE / 2;
+			double py = player->Y + player->Height * SCALE;
+			DistToPlayer = ((px - X)*(px - X) + (py - Y)*(py - Y));
+			if (Wander)
+			{
+				if (Action == Moving)
+				{
+					double dx = nextx - X;
+					double dy = nexty - Y;
+
+					float length = sqrtf(dx*dx + dy * dy);
+
+					if (length <= MaxVelocity)
+					{
+						Action = Standing;
+					}
+
+					dx /= length;
+					dy /= length;
+					X += dx * dt * MaxVelocity;
+					Y += dy * dt * MaxVelocity;
+				}
+				if (Action == Standing)
+				{
+					if (SDL_GetTicks() >= nextmove)
+					{
+						Action = Moving;
+						GetNextMove(NextMoveMin, NextMoveMax);
+					}
+				}
+			}
+			if (IsAggro)
+			{
+				if (DistToPlayer > AggroDistance) Action = Standing;
+				if (DistToPlayer < AggroDistance && DistToPlayer > AttackDistance)
+				{
+					Action = Aggro;
+				}
+				if (DistToPlayer < AttackDistance)
+				{
+					Action = Attacking;
+				}
+				if (Action == Aggro && !lineofsightbroken)
+				{
+					double px = p->X + p->Width * SCALE / 2 - X;
+					double py = p->Y + p->Height * 0.75 * SCALE - Y;
+
+					float length = sqrtf(px*px + py * py);
+
+					if (length <= MaxVelocity)
+					{
+						Action = Standing;
+					}
+
+					px /= length;
+					py /= length;
+					X += px * dt * MaxVelocity;
+					Y += py * dt * MaxVelocity;
+				}
+				if (Action == Aggro || Action == Attacking)
+					if (lineofsightbroken)
+						Action = Standing;
+			}
+		}
+		if (Health <= 0)
+		{
+			Health = 0;
+			Action = EntityAction::Dead;
+			IsSolid = false;
+			if (!OnDieExecuted)
+			{
+				OnDie();
+				OnDieExecuted = true;
+			}
+		}
+
+	}
+	virtual void Draw(Viewport v, SDL_Renderer* ren)
+	{
+		Entity::Draw(viewport, ren);
+		if (Health < MaxHealth && Action != EntityAction::Dead)
+		{
+			DrawHealthBar(viewport, ren);
+		}
+	}
+	virtual void OnDie()
+	{
+
+	}
+	void GetNextMove(int min, int max)
+	{
+		nextx = X + cos(rand()) * (rand() % 10);
+		nexty = Y + sin(rand()) * (rand() % 10);
+		nextmove = SDL_GetTicks() + rand() % max + min;
+	}
+};
+class Critter : public Enemy
+{
+public:
+	Critter(std::vector<Solid>* solids, Player* player, double x, double y) :
+		Enemy(solids, player)
 	{
 		X = x;
 		Y = y;
 		id = "critter";
 		Level = 1;
 		Name = "Critter";
-		Action = Standing;
 		MaxVelocity = 0.02;
-		IsSolid = true;
-
-		nextx = X + cos(rand()) * (rand() % 10);
-		nexty = Y + sin(rand()) * (rand() % 10);
-		nextmove = SDL_GetTicks() + rand() % 10000 + 5000;
-		Action = Standing;
-
 		Width = 6;
 		Height = 5;
 	}
 	virtual void Update(double dt)
 	{
+		Enemy::Update(dt);
 
-		if (Action == Moving)
+		if (Action == EntityAction::Dead) // if dead
 		{
-			double dx = nextx - X;
-			double dy = nexty - Y;
-
-			float length = sqrtf(dx*dx + dy * dy);
-
-			if (length <= MaxVelocity)
-			{
-				Action = Standing;
-			}
-
-			dx /= length;
-			dy /= length;
-			X += dx * dt * MaxVelocity;
-			Y += dy * dt * MaxVelocity;
+			AnimationY = 2;
+			AnimationX = 0;
 		}
-		if (Action == Standing)
+		else
 		{
-			if (SDL_GetTicks() >= nextmove)
+			if (Action == EntityAction::Moving || Action == EntityAction::Aggro) // if moving
 			{
-				Action = Moving;
-				nextx = X + rand() % 50 - 25;
-				nexty = Y + rand() % 50 - 25;
-				nextmove = SDL_GetTicks() + rand() % 10000 + 5000;
+				AnimationY = 1;
+				AnimationX += 0.01 * dt;
+				if (AnimationX >= 2) AnimationX = 0;
+			}
+			else // If standing
+			{
+				AnimationY = 0;
+				AnimationX = 0;
 			}
 		}
-		
-
-		if (Health <= 0)
-		{
-			Alive = false;
-		}
 	}
-	virtual void Draw(SDL_Renderer* ren)
-	{
-		Entity::Draw(viewport, ren);
-		// Draw text if cursor rect intersects self rect
-		SDL_Rect curr = { cursor->X, cursor->Y, cursor->Width, cursor->Height };
-		SDL_Rect r = { X + viewport.X, Y + viewport.Y, Width * SCALE, Height * SCALE };
-
-		if (SDL_HasIntersection(&curr, &r))
-		{
-			DrawHealthBar(viewport, ren);
-		}
-	}
+	
 };
 
-class FireCritter : public Entity
+class FireCritter : 
+	public Enemy
 {
-	int nextx;
-	int nexty;
-	int nextmove;
-
-	int AggroDist = 100000;
-	int AttackDist = 40000;
 public:
-	FireCritter(double x, double y)
+	FireCritter(std::vector<Solid>* solids, Player* player, double x, double y) :
+		Enemy(solids, player)
 	{
 		X = x;
 		Y = y;
@@ -492,134 +348,58 @@ public:
 		Name = "Fire Critter";
 		Action = Standing;
 		MaxVelocity = 0.06;
-		IsSolid = true;
-
-		nextx = X + cos(rand()) * (rand() % 10);
-		nexty = Y + sin(rand()) * (rand() % 10);
-		nextmove = SDL_GetTicks() + rand() % 10000 + 5000;
-		Action = Standing;
 
 		Width = 6;
 		Height = 10;
-		Attack = 1;
-		Health = 1;
-		MaxHealth = 1;
+		Health = 2;
+		MaxHealth = 2;
 		AttackTimeout = 400;
+		AggroDistance = 160000;
+		AttackDistance = 30000;
+		IsAggro = true;
 	}
 	virtual void Update(double dt)
 	{
-		// Get distance to player's feet
-		double px = player->X + player->Width * SCALE / 2;
-		double py = player->Y + player->Height * SCALE;
-
-		double d = ((px - X)*(px - X) + (py - Y)*(py - Y));
-		if (d < AggroDist && d > AttackDist)
+		Enemy::Update(dt);
+		if (Action == EntityAction::Dead) // if dead
 		{
-			Action = Aggro;
+			AnimationY = 2;
+			AnimationX = 0;
 		}
-		if (d < AttackDist)
+		if (Action == Moving ||
+			Action == Aggro)
 		{
-			Action = Attacking;
+			AnimationY = 1;
+			AnimationX += 0.01 * dt;
+			if (AnimationX >= 2) AnimationX = 0;
 		}
-		if (Action == Moving)
+		if (Action == Standing ||
+			Action == Attacking)
 		{
-			double dx = nextx - X;
-			double dy = nexty - Y;
-
-			float length = sqrtf(dx*dx + dy * dy);
-
-			if (length <= MaxVelocity)
-			{
-				Action = Standing;
-			}
-
-			dx /= length;
-			dy /= length;
-			X += dx * dt * MaxVelocity;
-			Y += dy * dt * MaxVelocity;
+			AnimationY = 0;
+			AnimationX += 0.01 * dt;
+			if (AnimationX >= 2) AnimationX = 0;
 		}
-		if (Action == Standing)
-		{
-			if (SDL_GetTicks() >= nextmove)
-			{
-				Action = Moving;
-				nextx = X + rand() % 50 - 25;
-				nexty = Y + rand() % 50 - 25;
-				nextmove = SDL_GetTicks() + rand() % 10000 + 5000;
-			}
-		}
-		if (Action == Aggro)
-		{
-			double dx = px - X - Width * SCALE / 2;
-			double dy = py - Y - Height * SCALE;
-
-			float length = sqrtf(dx*dx + dy * dy);
-			dx /= length;
-			dy /= length;
-			X += dx * dt * MaxVelocity;
-			Y += dy * dt * MaxVelocity;
-
-			if (d > AggroDist) Action = Standing;
-		}
-		// Check line of sight
-		int x = X;
-		int y = Y;
-		int x2 = player->X;
-		int y2 = player->Y;
-		for (int i = 0; i < solids.size(); i++)
-		{
-			if (SDL_IntersectRectAndLine(&solids[i].Rect, &x, &y, &x2, &y2))
-			{
-				Action = Standing;
-			}
-		}
-
-		if (Action == Attacking || Action == Aggro)
+		if (Action == EntityAction::Attacking || Action == EntityAction::Aggro)
 		{
 			if (NextAttack <= SDL_GetTicks())
 			{
 				// Launch fireball
-				Fireball* fb = new Fireball(&entities, X, Y, player->X + player->Width * SCALE / 2, player->Y + player->Height * SCALE / 2);
+				Fireball* fb = new Fireball(&solids, player, renderer, &entities, X, Y, player->X + player->Width * SCALE / 2, player->Y + player->Height * SCALE / 2);
 				fb->LoadImage(renderer, "gfx/fireball.bmp");
 				entities.push_back(fb);
 				NextAttack = SDL_GetTicks() + AttackTimeout;
 			}
-			if (d > 20000) Action = Standing;
-
-			
-		}
-
-		if (Health <= 0)
-		{
-			Alive = false;
-		}
-
-
-		AnimationY = 0;
-		AnimationX += 0.01 * dt;
-		if (AnimationX > 2) AnimationX = AnimationX - (int)AnimationX;
-	}
-	virtual void Draw(SDL_Renderer* ren)
-	{
-		Entity::Draw(viewport, ren);
-		// Draw text if cursor rect intersects self rect
-		SDL_Rect curr = { cursor->X, cursor->Y, cursor->Width, cursor->Height };
-		SDL_Rect r = { X + viewport.X, Y + viewport.Y, Width * SCALE, Height * SCALE };
-
-		if (SDL_HasIntersection(&curr, &r))
-		{
-			DrawHealthBar(viewport, ren);
 		}
 	}
 };
 
-class ZombieCritter : public Entity
+class ZombieCritter : 
+	public Enemy
 {
-	int nextx;
-	int nexty;
-	int nextmove;
 public:
-	ZombieCritter(double x, double y)
+	ZombieCritter(std::vector<Solid>* solids, Player* player, double x, double y) :
+		Enemy(solids, player)
 	{
 		X = x;
 		Y = y;
@@ -627,129 +407,203 @@ public:
 		Level = 5;
 		Name = "Zombie Critter";
 		Action = Standing;
-		MaxVelocity = 0.02;
-		IsSolid = true;
-
-		nextx = X + cos(rand()) * (rand() % 10);
-		nexty = Y + sin(rand()) * (rand() % 10);
-		nextmove = SDL_GetTicks() + rand() % 10000 + 5000;
-		Action = Standing;
-
 		Width = 6;
 		Height = 5;
 		Attack = 1;
 		Health = 2;
 		MaxHealth = 2;
 		AttackTimeout = 2500;
+		AggroDistance = 15000;
+		AttackDistance = 600;
 		Respawn = true;
+		IsAggro = true;
 	}
 	virtual void Update(double dt)
 	{
-		// Get distance to player's feet
-		double px = player->X + player->Width * SCALE / 2;
-		double py = player->Y + player->Height * SCALE;
+		Enemy::Update(dt);
 
-		double d = ((px - X)*(px - X) + (py - Y)*(py - Y));
-		if (d < 15000 && d > 400)
+		if (Action == EntityAction::Standing) // if STANDING
 		{
-			Action = Aggro;
+			AnimationY = 0;
+			AnimationX = 0;
 		}
-		if (d < 500)
+		if (Action == EntityAction::Dead) // if dead
 		{
-			Action = Attacking;
-		}
-		if (Action == Moving)
-		{
-			double dx = nextx - X;
-			double dy = nexty - Y;
-
-			float length = sqrtf(dx*dx + dy * dy);
-
-			if (length <= MaxVelocity)
-			{
-				Action = Standing;
-			}
-
-			dx /= length;
-			dy /= length;
-			X += dx * dt * MaxVelocity;
-			Y += dy * dt * MaxVelocity;
-		}
-		if (Action == Standing)
-		{
-			if (SDL_GetTicks() >= nextmove)
-			{
-				Action = Moving;
-				nextx = X + rand() % 50 - 25;
-				nexty = Y + rand() % 50 - 25;
-				nextmove = SDL_GetTicks() + rand() % 10000 + 5000;
-			}
-		}
-		if (Action == Aggro || Action == Attacking)
-		{
-			// Check line of sight
-			int x = X;
-			int y = Y;
-			int x2 = player->X;
-			int y2 = player->Y;
-			for (int i = 0; i < solids.size(); i++)
-			{
-				if (SDL_IntersectRectAndLine(&solids[i].Rect, &x, &y, &x2, &y2))
-				{
-					Action = Standing;
-				}
-			}
+			AnimationY = 2;
+			AnimationX = 0;
 		}
 		if (Action == Aggro)
 		{
-			double dx = px - X - Width * SCALE / 2;
-			double dy = py - Y - Height * SCALE;
-
-			float length = sqrtf(dx*dx + dy * dy);
-			dx /= length;
-			dy /= length;
-			X += dx * dt * MaxVelocity;
-			Y += dy * dt * MaxVelocity;
-
-			if (d > 1500) Action = Standing;
+			AnimationY = 1;
+			AnimationX += 0.01 * dt;
+			if (AnimationX >= 2) AnimationX = 0;
 		}
 		if (Action == Attacking)
 		{
-			if (NextAttack <= SDL_GetTicks())
+			AnimationY = 0;
+			AnimationX = 0;
+
+			if (SDL_GetTicks() >= NextAttack)
 			{
-				player->Health -= Attack;
+				p->Health -= AttackDamage;
 				NextAttack = SDL_GetTicks() + AttackTimeout;
 			}
-			if (d > 1500) Action = Standing;
 		}
-		
-
-		if (Health <= 0)
-		{
-			Alive = false;
-		}
+			
 	}
-	virtual void Draw(SDL_Renderer* ren)
+	virtual void Draw(Viewport v, SDL_Renderer* ren)
 	{
 		Entity::Draw(viewport, ren);
-		// Draw text if cursor rect intersects self rect
-		SDL_Rect curr = { cursor->X, cursor->Y, cursor->Width, cursor->Height };
-		SDL_Rect r = { X + viewport.X, Y + viewport.Y, Width * SCALE, Height * SCALE };
-
-		if (SDL_HasIntersection(&curr, &r))
+		if (Health < MaxHealth && Action != EntityAction::Dead)
 		{
 			DrawHealthBar(viewport, ren);
 		}
 	}
 };
 
-class BigZombieCritter : public Entity
+class Skeleton :
+	public Enemy
 {
-	int nextx;
-	int nexty;
-	int nextmove;
 public:
-	BigZombieCritter(double x, double y)
+	Skeleton(std::vector<Solid>* solids, Player* player, double x, double y) :
+		Enemy(solids, player)
+	{
+		X = x;
+		Y = y;
+		id = "skeleton";
+		Level = 5;
+		Name = "Skeleton";
+		Action = Standing;
+		Width = 7;
+		Height = 16;
+		AttackDamage = 3;
+		Health = 5;
+		MaxHealth = 5;
+		MaxVelocity = 0.12f;
+		AttackTimeout = 2500;
+		AggroDistance = 28000;
+		AttackDistance = 600;
+		Respawn = true;
+		IsAggro = true;
+		BloodSplatter = false;
+	}
+	virtual void Update(double dt)
+	{
+		Enemy::Update(dt);
+
+		if (Action == EntityAction::Standing) // if STANDING
+		{
+			AnimationY = 0;
+			AnimationX = 0;
+		}
+		if (Action == EntityAction::Dead) // if dead
+		{
+			AnimationY = 2;
+			AnimationX = 0;
+		}
+		if (Action == Aggro)
+		{
+			AnimationY = 1;
+			AnimationX += 0.01 * dt;
+			if (AnimationX >= 2) AnimationX = 0;
+		}
+		if (Action == Attacking)
+		{
+			AnimationY = 0;
+			AnimationX = 0;
+
+			if (SDL_GetTicks() >= NextAttack)
+			{
+				p->Health -= AttackDamage;
+				NextAttack = SDL_GetTicks() + AttackTimeout;
+			}
+		}
+
+	}
+	virtual void Draw(Viewport v, SDL_Renderer* ren)
+	{
+		Entity::Draw(viewport, ren);
+		if (Health < MaxHealth && Action != EntityAction::Dead)
+		{
+			DrawHealthBar(viewport, ren);
+		}
+	}
+};
+
+class Zombie :
+	public Enemy
+{
+public:
+	Zombie(std::vector<Solid>* solids, Player* player, double x, double y) :
+		Enemy(solids, player)
+	{
+		X = x;
+		Y = y;
+		id = "zombie";
+		Level = 5;
+		Name = "Zombie";
+		Action = Standing;
+		Width = 7;
+		Height = 16;
+		AttackDamage = 3;
+		Health = 7;
+		MaxHealth = 7;
+		MaxVelocity = 0.11f;
+		AttackTimeout = 2500;
+		AggroDistance = 28000;
+		AttackDistance = 600;
+		Respawn = true;
+		IsAggro = true;
+	}
+	virtual void Update(double dt)
+	{
+		Enemy::Update(dt);
+
+		if (Action == EntityAction::Standing) // if STANDING
+		{
+			AnimationY = 0;
+			AnimationX = 0;
+		}
+		if (Action == EntityAction::Dead) // if dead
+		{
+			AnimationY = 2;
+			AnimationX = 0;
+		}
+		if (Action == Aggro)
+		{
+			AnimationY = 1;
+			AnimationX += 0.01 * dt;
+			if (AnimationX >= 2) AnimationX = 0;
+		}
+		if (Action == Attacking)
+		{
+			AnimationY = 0;
+			AnimationX = 0;
+
+			if (SDL_GetTicks() >= NextAttack)
+			{
+				p->Health -= AttackDamage;
+				NextAttack = SDL_GetTicks() + AttackTimeout;
+			}
+		}
+
+	}
+	virtual void Draw(Viewport v, SDL_Renderer* ren)
+	{
+		Entity::Draw(viewport, ren);
+		if (Health < MaxHealth && Action != EntityAction::Dead)
+		{
+			DrawHealthBar(viewport, ren);
+		}
+	}
+};
+
+class BigZombieCritter : 
+	public Enemy
+{
+public:
+	BigZombieCritter(std::vector<Solid>* solids, Player* player, double x, double y) :
+		Enemy(solids, player)
 	{
 		X = x;
 		Y = y;
@@ -758,136 +612,63 @@ public:
 		Name = "Big Zombie Critter";
 		Action = Standing;
 		MaxVelocity = 0.02;
-		IsSolid = true;
-
-		nextx = X + cos(rand()) * (rand() % 10);
-		nexty = Y + sin(rand()) * (rand() % 10);
-		nextmove = SDL_GetTicks() + rand() % 10000 + 5000;
-		Action = Standing;
-
 		Width = 9;
 		Height = 7;
 		Attack = 1;
 		Health = 7;
 		MaxHealth = 7;
 		AttackTimeout = 3000;
-		AggroDistance = 80000;
-		AttackDistance = 80000;
+		AggroDistance = 160000;
+		AttackDistance = 100000;
 		Respawn = false;
 	}
 	virtual void Update(double dt)
 	{
-		// Get distance to player's feet
-		double px = player->X + player->Width * SCALE / 2;
-		double py = player->Y + player->Height * SCALE;
-
-		double d = ((px - X)*(px - X) + (py - Y)*(py - Y));
-		if (d < AggroDistance && d > AttackDistance)
+		Enemy::Update(dt);
+		if (Action == EntityAction::Standing) // if standing
 		{
-			Action = Aggro;
+			AnimationY = 0;
+			AnimationX = 0;
 		}
-		if (d < AttackDistance)
+		if (Action == EntityAction::Dead) // if dead
 		{
-			Action = Attacking;
+			AnimationY = 2;
+			AnimationX = 0;
 		}
-		if (Action == Moving)
+		
+		if (Action == Moving ||
+			Action == Aggro)
 		{
-			double dx = nextx - X;
-			double dy = nexty - Y;
-
-			float length = sqrtf(dx*dx + dy * dy);
-
-			if (length <= MaxVelocity)
-			{
-				Action = Standing;
-			}
-
-			dx /= length;
-			dy /= length;
-			X += dx * dt * MaxVelocity;
-			Y += dy * dt * MaxVelocity;
-		}
-		if (Action == Standing)
-		{
-			if (SDL_GetTicks() >= nextmove)
-			{
-				Action = Moving;
-				nextx = X + rand() % 50 - 25;
-				nexty = Y + rand() % 50 - 25;
-				nextmove = SDL_GetTicks() + rand() % 10000 + 5000;
-			}
-		}
-		if (Action == Aggro || Action == Attacking)
-		{
-			// Check line of sight
-			int x = X;
-			int y = Y;
-			int x2 = player->X;
-			int y2 = player->Y;
-			for (int i = 0; i < solids.size(); i++)
-			{
-				if (SDL_IntersectRectAndLine(&solids[i].Rect, &x, &y, &x2, &y2))
-				{
-					Action = Standing;
-				}
-			}
-		}
-		if (Action == Aggro)
-		{
-			double dx = px - X - Width * SCALE / 2;
-			double dy = py - Y - Height * SCALE;
-
-			float length = sqrtf(dx*dx + dy * dy);
-			dx /= length;
-			dy /= length;
-			X += dx * dt * MaxVelocity;
-			Y += dy * dt * MaxVelocity;
-
-			if (d > AttackDistance) Action = Standing;
+			AnimationY = 1;
+			AnimationX += 0.01 * dt;
+			if (AnimationX >= 2) AnimationX = 0;
 		}
 		if (Action == Attacking)
 		{
 			if (NextAttack <= SDL_GetTicks())
 			{
 				// Spawn fire critter
-				FireCritter* f = new FireCritter(X + Width / 2, Y + Height / 2);
+				FireCritter* f = new FireCritter(&solids, player, X + Width / 2, Y + Height / 2);
 				f->LoadImage(renderer, "gfx/fire_critter.bmp");
 				entities.push_back(f);
 				NextAttack = SDL_GetTicks() + AttackTimeout;
 			}
-			if (d > AggroDistance) Action = Standing;
-		}
-
-
-		if (Health <= 0)
-		{
-			Alive = false;
-		}
-	}
-	virtual void Draw(SDL_Renderer* ren)
-	{
-		Entity::Draw(viewport, ren);
-		// Draw text if cursor rect intersects self rect
-		SDL_Rect curr = { cursor->X, cursor->Y, cursor->Width, cursor->Height };
-		SDL_Rect r = { X + viewport.X, Y + viewport.Y, Width * SCALE, Height * SCALE };
-
-		if (SDL_HasIntersection(&curr, &r))
-		{
-			DrawHealthBar(viewport, ren);
 		}
 	}
 };
 
-class KingCritter : public Entity
+
+class KingCritter : 
+	public Enemy
 {
 	int nextx;
 	int nexty;
 	int nextmove;
 
-	int AggroDist = 180000;
-	int AttackDist = 40000;
+	
 public:
-	KingCritter(double x, double y)
+	KingCritter(std::vector<Solid>* solids, Player* player, double x, double y) :
+		Enemy(solids, player)
 	{
 		X = x;
 		Y = y;
@@ -898,84 +679,37 @@ public:
 		MaxVelocity = 0.06;
 		IsSolid = true;
 
-		nextx = X + cos(rand()) * (rand() % 10);
-		nexty = Y + sin(rand()) * (rand() % 10);
-		nextmove = SDL_GetTicks() + rand() % 10000 + 5000;
-		Action = Standing;
-
 		Width = 14;
 		Height = 12;
-		Attack = 1;
 		Health = 300;
 		MaxHealth = 300;
 		AttackTimeout = 150;
+		AggroDistance = 180000;
+		AttackDistance = 40000;
+
+		IsAggro = true;
 	}
-	virtual void Update(double dt)
-	{
-		// Get distance to player's feet
-		double px = player->X + player->Width * SCALE / 2;
-		double py = player->Y + player->Height * SCALE;
-
-		double d = ((px - X)*(px - X) + (py - Y)*(py - Y));
-		if (d < AggroDist && d > AttackDist)
+	virtual void Update(double dt) 
+	{ // Check line of sight
+		
+		Enemy::Update(dt);
+		if (Action == EntityAction::Dead) // if dead
 		{
-			Action = Aggro;
+			AnimationY = 2;
+			AnimationX = 0;
 		}
-		if (d < AttackDist)
+		if (Action == Moving ||
+			Action == Aggro)
 		{
-			Action = Attacking;
+			AnimationY = 1;
+			AnimationX += 0.01 * dt;
+			if (AnimationX >= 2) AnimationX = 0;
 		}
-		if (Action == Moving)
+		if (Action == Standing |
+			Action == Attacking)
 		{
-			double dx = nextx - X;
-			double dy = nexty - Y;
-
-			float length = sqrtf(dx*dx + dy * dy);
-
-			if (length <= MaxVelocity)
-			{
-				Action = Standing;
-			}
-
-			dx /= length;
-			dy /= length;
-			X += dx * dt * MaxVelocity;
-			Y += dy * dt * MaxVelocity;
-		}
-		if (Action == Standing)
-		{
-			if (SDL_GetTicks() >= nextmove)
-			{
-				Action = Moving;
-				nextx = X + rand() % 50 - 25;
-				nexty = Y + rand() % 50 - 25;
-				nextmove = SDL_GetTicks() + rand() % 10000 + 5000;
-			}
-		}
-		if (Action == Aggro)
-		{
-			double dx = px - X - Width * SCALE / 2;
-			double dy = py - Y - Height * SCALE;
-
-			float length = sqrtf(dx*dx + dy * dy);
-			dx /= length;
-			dy /= length;
-			X += dx * dt * MaxVelocity;
-			Y += dy * dt * MaxVelocity;
-
-			if (d > AggroDist) Action = Standing;
-		}
-		// Check line of sight
-		int x = X;
-		int y = Y;
-		int x2 = player->X;
-		int y2 = player->Y;
-		for (int i = 0; i < solids.size(); i++)
-		{
-			if (SDL_IntersectRectAndLine(&solids[i].Rect, &x, &y, &x2, &y2))
-			{
-				Action = Standing;
-			}
+			AnimationY = 0;
+			AnimationX = 0;
 		}
 
 		if (Action == Attacking || Action == Aggro)
@@ -983,53 +717,45 @@ public:
 			if (NextAttack <= SDL_GetTicks())
 			{
 				// Launch fireball
-				Fireball* fb = new Fireball(&entities, X, Y, player->X + player->Width * SCALE / 2, player->Y + player->Height * SCALE / 2);
+				Fireball* fb = new Fireball(&solids, player, renderer, &entities, X, Y, player->X + player->Width * SCALE / 2, player->Y + player->Height * SCALE / 2);
 				fb->LoadImage(renderer, "gfx/fireball.bmp");
 				entities.push_back(fb);
 				NextAttack = SDL_GetTicks() + AttackTimeout;
 			}
-			if (d > AttackDist) Action = Standing;
-
-
 		}
-
-		if (Health <= 0)
-		{
-			double x = X + rand() % (int)Width - Width / 2;
-			double y = Y + rand() % (int)Height - Height / 2;
-			Alive = false;
-			Item* i = new Item(x + Width / 2, y + Height / 2, "Sword of Gryifningu", "g_sword");
-			i->Width = 4;
-			i->Height = 11;
-			i->LoadImage(renderer, "gfx/g_sword.bmp");
-			entities.push_back(i);
-
-			x = X + rand() % (int)Width - Width / 2;
-			y = Y + rand() % (int)Height - Height / 2;
-			MaximumHealth* mh = new MaximumHealth(x + Width / 2, y + Height / 2, "Max Health");
-			mh->Width = 9;
-			mh->Height = 9;
-			mh->LoadImage(renderer, "gfx/max_health.bmp");
-			entities.push_back(mh);
-			
-		}
-
-
-		//AnimationY = 0;
-		//AnimationX += 0.01 * dt;
-		//if (AnimationX > 2) AnimationX = AnimationX - (int)AnimationX;
 	}
-	virtual void Draw(SDL_Renderer* ren)
+	virtual void Draw(Viewport v, SDL_Renderer* ren)
 	{
 		Entity::Draw(viewport, ren);
-		// Draw text if cursor rect intersects self rect
-		SDL_Rect curr = { cursor->X, cursor->Y, cursor->Width, cursor->Height };
-		SDL_Rect r = { X + viewport.X, Y + viewport.Y, Width * SCALE, Height * SCALE };
-
-		if (SDL_HasIntersection(&curr, &r))
+		if (Health < MaxHealth && Action != EntityAction::Dead)
 		{
 			DrawHealthBar(viewport, ren);
 		}
+	}
+	virtual void OnDie()
+	{
+		if (OnDieFuncName == "drop_sword_and_health")
+		{
+			DropSwordAndHealth((Entity*)this);
+		}
+	}
+
+	void DropSwordAndHealth(Entity* e)
+	{
+		double x = e->X + rand() % (int)e->Width - e->Width / 2;
+		double y = e->Y + rand() % (int)e->Height - e->Height / 2;
+		Item* i = new Item(&entities, &viewport, player, x + e->Width / 2, y + e->Height / 2, "Sword of Gryifningu", "g_sword");
+		i->Width = 4;
+		i->Height = 11;
+		i->LoadImage(renderer, "gfx/g_sword.bmp");
+		entities.push_back(i);
+		x = e->X + rand() % (int)e->Width - e->Width / 2;
+		y = e->Y + rand() % (int)e->Height - e->Height / 2;
+		MaximumHealth* mh = new MaximumHealth(player, x + e->Width / 2, y + e->Height / 2, "Max Health");
+		mh->Width = 9;
+		mh->Height = 9;
+		mh->LoadImage(renderer, "gfx/max_health.bmp");
+		entities.push_back(mh);
 	}
 };
 
@@ -1055,9 +781,16 @@ public:
 			int j = p->Inventory.size();
 			for (int i = 0; i < j; i++)
 			{
-				
+				std::stringstream ss;
+				ss << p->Inventory[i].Name;
+				if (p->Inventory[i].Id == "holy_grail")
+				{
+					ss << (flags["holy_grail_full"] ? " (full)" : "(not full)");
+				}
+				if (p->Inventory[i].Count > 1)
+					ss << " x" << p->Inventory[i].Count;
 				SDL_Surface * s = TTF_RenderText_Solid(font,
-					p->Inventory[i].Name.c_str(), { 255, 255, 255 });
+					ss.str().c_str(), { 255, 255, 255 });
 				int w = s->w;
 				int h = s->h;
 				SDL_Rect expr = { viewport.Width - w, viewport.Height / 2 - h * i - j / 2, w, h };
@@ -1090,6 +823,8 @@ void LoadLevel(std::string filename)
 	solids.clear();
 	warps.clear();
 	hurt.clear();
+	triggers.clear();
+	shadedareas.clear();
 	pugi::xml_document doc;
 	pugi::xml_parse_result result = doc.load_file(("maps/" + filename).c_str());
 
@@ -1143,8 +878,8 @@ void LoadLevel(std::string filename)
 			int w = object.attribute("width").as_int();
 			int h = object.attribute("height").as_int();
 			int mapid = object.attribute("id").as_int();
-			std::string name = object.attribute("name").as_string();
 			Solid s;
+			s.Count = 1;
 			s.Rect = { x, y, w, h };
 			
 				for (pugi::xml_node property = object.child("properties").first_child(); property; property = property.next_sibling())
@@ -1154,8 +889,67 @@ void LoadLevel(std::string filename)
 					{
 						s.NeedsKey = property.attribute("value").as_string();
 					}
+					if (name == "count")
+					{
+						s.Count = property.attribute("value").as_int();
+					}
+					if (name == "flag")
+					{
+						s.NeedsFlag = property.attribute("value").as_string();
+					}
+					
 				}
 			solids.push_back(s);
+		}
+		if (name == "shaded")
+		{
+			int x = object.attribute("x").as_int();
+			int y = object.attribute("y").as_int();
+			int w = object.attribute("width").as_int();
+			int h = object.attribute("height").as_int();
+			int mapid = object.attribute("id").as_int();
+			std::string shader;
+			for (pugi::xml_node property = object.child("properties").first_child(); property; property = property.next_sibling())
+			{
+				std::string name = property.attribute("name").as_string();
+				
+				if (name == "shader")
+				{
+					shader = property.attribute("value").as_string();
+				}
+
+			}
+			ShadedArea sh = ShadedArea("shaders/" + shader + ".vs", "shaders/" + shader + ".fs");
+			sh.Rect = { x, y, w, h };
+			shadedareas.push_back(sh);
+		}
+		if (name == "trigger")
+		{
+			int x = object.attribute("x").as_int();
+			int y = object.attribute("y").as_int();
+			int w = object.attribute("width").as_int();
+			int h = object.attribute("height").as_int();
+			std::string name = object.attribute("name").as_string();
+			Trigger t;
+			t.Rect = { x, y, w, h };
+
+			for (pugi::xml_node property = object.child("properties").first_child(); property; property = property.next_sibling())
+			{
+				std::string name = property.attribute("name").as_string();
+				if (name == "flag")
+				{
+					t.FlagName = property.attribute("value").as_string();
+				}
+				if (name == "value")
+				{
+					t.FlagValue = property.attribute("value").as_bool();
+				}
+				if (name == "needsitem")
+				{
+					t.NeedsItem = property.attribute("value").as_string();
+				}
+			}
+			triggers.push_back(t);
 		}
 		if (name == "hurt")
 		{
@@ -1166,6 +960,29 @@ void LoadLevel(std::string filename)
 			
 			hurt.push_back({ x, y, w, h });
 		}
+		if (name == "heal")
+		{
+			int x = object.attribute("x").as_int();
+			int y = object.attribute("y").as_int();
+			int w = object.attribute("width").as_int();
+			int h = object.attribute("height").as_int();
+
+			heal.push_back({ x, y, w, h });
+		}
+		if (name == "skull_key")
+		{
+			int x = object.attribute("x").as_int();
+			int y = object.attribute("y").as_int();
+
+			SkullKey* k = new SkullKey(&entities, &currentmousestate, &previousmousestate, player, &flags, &viewport);
+			k->X = x;
+			k->Y = y;
+			k->LoadImage(renderer, "gfx/skull.bmp");
+			k->IsSolid = true;
+			entities.push_back(k);
+
+		}
+
 		if (name == "player")
 		{
 			int x = object.attribute("x").as_int();
@@ -1181,7 +998,7 @@ void LoadLevel(std::string filename)
 			int x = object.attribute("x").as_int();
 			int y = object.attribute("y").as_int();
 			int mapid = object.attribute("id").as_int();
-			Critter* crit = new Critter(x, y);
+			Critter* crit = new Critter(&solids, player, x, y);
 			crit->killID.MapID = mapid;
 			crit->killID.Map = currentmap;
 			crit->LoadImage(renderer, "gfx/critter.bmp");
@@ -1192,10 +1009,18 @@ void LoadLevel(std::string filename)
 			int x = object.attribute("x").as_int();
 			int y = object.attribute("y").as_int();
 			int mapid = object.attribute("id").as_int();
-			KingCritter* crit = new KingCritter(x, y);
+			KingCritter* crit = new KingCritter(&solids, player, x, y);
 			crit->killID.MapID = mapid;
 			crit->killID.Map = currentmap;
-			crit->LoadImage(renderer, "gfx/king_critter.bmp");
+			crit->LoadImage(renderer, "gfx/king_critter.bmp"); for (pugi::xml_node property = object.child("properties").first_child(); property; property = property.next_sibling())
+			{
+				std::string name = property.attribute("name").as_string();
+
+				if (name == "ondie")
+				{
+					crit->OnDieFuncName = property.attribute("value").as_string();
+				}
+			}
 			entities.push_back(crit);
 		}
 		if (name == "spawn")
@@ -1227,34 +1052,58 @@ void LoadLevel(std::string filename)
 
 				if (spawn_id == "critter")
 				{
-					Critter* crit = new Critter(nx, ny);
-					crit->killID.MapID = mapid;
+					Critter* crit = new Critter(&solids, player, nx, ny);
+					crit->killID.MapID = -1;
 					crit->killID.Map = currentmap;
 					crit->LoadImage(renderer, "gfx/critter.bmp");
 					entities.push_back(crit);
 				}
 				if (spawn_id == "fire_critter")
 				{
-					FireCritter* crit = new FireCritter(nx, ny);
-					crit->killID.MapID = mapid;
+					FireCritter* crit = new FireCritter(&solids, player, nx, ny);
+					crit->killID.MapID = -1;
 					crit->killID.Map = currentmap;
 					crit->LoadImage(renderer, "gfx/fire_critter.bmp");
 					entities.push_back(crit);
 				}
 				if (spawn_id == "zombie_critter")
 				{
-					ZombieCritter* crit = new ZombieCritter(nx, ny);
-					crit->killID.MapID = mapid;
+					ZombieCritter* crit = new ZombieCritter(&solids, player, nx, ny);
+					crit->killID.MapID = -1;
 					crit->killID.Map = currentmap;
 					crit->LoadImage(renderer, "gfx/zombie_critter.bmp");
 					entities.push_back(crit);
 				}
+				if (spawn_id == "skeleton")
+				{
+					Skeleton* s = new Skeleton(&solids, player, nx, ny);
+					s->killID.MapID = -1;
+					s->killID.Map = currentmap;
+					s->LoadImage(renderer, "gfx/skeleton.bmp");
+					entities.push_back(s);
+				}
+				if (spawn_id == "zombie")
+				{
+					Zombie* s = new Zombie(&solids, player, nx, ny);
+					s->killID.MapID = -1;
+					s->killID.Map = currentmap;
+					s->LoadImage(renderer, "gfx/zombie.bmp");
+					entities.push_back(s);
+				}
 				if (spawn_id == "big_zombie_critter")
 				{
-					BigZombieCritter* crit = new BigZombieCritter(nx, ny);
-					crit->killID.MapID = mapid;
+					BigZombieCritter* crit = new BigZombieCritter(&solids, player, nx, ny);
+					crit->killID.MapID = -1;
 					crit->killID.Map = currentmap;
 					crit->LoadImage(renderer, "gfx/big_zombie_critter.bmp");
+					entities.push_back(crit);
+				}
+				if (spawn_id == "king_critter")
+				{
+					KingCritter* crit = new KingCritter(&solids, player, nx, ny);
+					crit->killID.MapID = -1;
+					crit->killID.Map = currentmap;
+					crit->LoadImage(renderer, "gfx/king_critter.bmp");
 					entities.push_back(crit);
 				}
 			}
@@ -1265,7 +1114,7 @@ void LoadLevel(std::string filename)
 			int x = object.attribute("x").as_int();
 			int y = object.attribute("y").as_int();
 			int mapid = object.attribute("id").as_int();
-			NPC* npc = new NPC(x, y);
+			NPC* npc = new NPC(&flags, &entities, player, monsterfont, &viewport, cursor, x, y);
 			npc->killID.MapID = mapid;
 			npc->killID.Map = currentmap;
 			npc->Name = object.attribute("type").as_string();
@@ -1278,9 +1127,21 @@ void LoadLevel(std::string filename)
 				{
 					npc->Dialog = property.attribute("value").as_string();
 				}
+				if (name == "alt_dialog")
+				{
+					npc->AltDialog = property.attribute("value").as_string();
+				}
+				if (name == "dialog_item")
+				{
+					npc->AltDialogItem = property.attribute("value").as_string();
+				}
 				if (name == "name")
 				{
 					npc->Name = property.attribute("value").as_string();
+				}
+				if (name == "dialog_flag")
+				{
+					npc->AltDialogFlag = property.attribute("value").as_string();
 				}
 				if (name == "sprite")
 				{
@@ -1302,18 +1163,40 @@ void LoadLevel(std::string filename)
 			int x = object.attribute("x").as_int();
 			int y = object.attribute("y").as_int();
 			int mapid = object.attribute("id").as_int();
-			ZombieCritter* crit = new ZombieCritter(x, y);
+			ZombieCritter* crit = new ZombieCritter(&solids, player, x, y);
 			crit->killID.MapID = mapid;
 			crit->killID.Map = currentmap;
 			crit->LoadImage(renderer, "gfx/zombie_critter.bmp");
 			entities.push_back(crit);
+		}
+		if (name == "skeleton")
+		{
+			int x = object.attribute("x").as_int();
+			int y = object.attribute("y").as_int();
+			int mapid = object.attribute("id").as_int();
+			Skeleton* s = new Skeleton(&solids, player, x, y);
+			s->killID.MapID = mapid;
+			s->killID.Map = currentmap;
+			s->LoadImage(renderer, "gfx/skeleton.bmp");
+			entities.push_back(s);
+		}
+		if (name == "zombie")
+		{
+			int x = object.attribute("x").as_int();
+			int y = object.attribute("y").as_int();
+			int mapid = object.attribute("id").as_int();
+			Zombie* z = new Zombie(&solids, player, x, y);
+			z->killID.MapID = mapid;
+			z->killID.Map = currentmap;
+			z->LoadImage(renderer, "gfx/zombie.bmp");
+			entities.push_back(z);
 		}
 		if (name == "big_zombie_critter")
 		{
 			int x = object.attribute("x").as_int();
 			int y = object.attribute("y").as_int();
 			int mapid = object.attribute("id").as_int();
-			BigZombieCritter* crit = new BigZombieCritter(x, y);
+			BigZombieCritter* crit = new BigZombieCritter(&solids, player, x, y);
 			crit->killID.MapID = mapid;
 			crit->killID.Map = currentmap;
 			crit->LoadImage(renderer, "gfx/big_zombie_critter.bmp");
@@ -1324,7 +1207,7 @@ void LoadLevel(std::string filename)
 			int x = object.attribute("x").as_int();
 			int y = object.attribute("y").as_int();
 			int mapid = object.attribute("id").as_int();
-			FireCritter* crit = new FireCritter(x, y);
+			FireCritter* crit = new FireCritter(&solids, player, x, y);
 			crit->killID.MapID = mapid;
 			crit->killID.Map = currentmap;
 			crit->LoadImage(renderer, "gfx/fire_critter.bmp");
@@ -1340,6 +1223,7 @@ void LoadLevel(std::string filename)
 			std::string targetlevel = "";
 			int targetwarpid;
 			int warpid;
+			std::string removeitems = "none";
 			for (pugi::xml_node property = object.child("properties").first_child(); property; property = property.next_sibling())
 			{
 				std::string name = property.attribute("name").as_string();
@@ -1356,12 +1240,49 @@ void LoadLevel(std::string filename)
 				{
 					warpid = property.attribute("value").as_int();
 				}
+				if (name == "remove_items")
+				{
+					removeitems = property.attribute("value").as_string() == "" ? "none" : property.attribute("value").as_string();
+				}
 			}
 
 			Warp wr = Warp(warpid, targetwarpid, targetlevel, { x, y, w, h });
+			wr.RemoveItems = removeitems;
 			warps.push_back(wr);
 
 		}
+		if (name == "gate")
+		{
+			int x = object.attribute("x").as_int();
+			int y = object.attribute("y").as_int();
+			int w = object.attribute("width").as_int();
+			int h = object.attribute("height").as_int();
+			int mapid = object.attribute("id").as_int();
+			std::string neededitem = "";
+			std::string flag;
+			for (pugi::xml_node property = object.child("properties").first_child(); property; property = property.next_sibling())
+			{
+				std::string name = property.attribute("name").as_string();
+
+				if (name == "needed_item")
+				{
+					neededitem = property.attribute("value").as_string();
+				}
+				if (name == "flag")
+				{
+					flag = property.attribute("value").as_string();
+				}
+			}
+
+			Gate* g = new Gate(&flags, &entities, &viewport, player, &currentmousestate, &previousmousestate, x, y, w, h);
+			g->IsSolid = true;
+			g->NeededItem = neededitem;
+			g->Flag = flag;
+			g->killID.MapID = mapid;
+			g->killID.Map = currentmap;
+			entities.push_back(g);
+		}
+
 		if (name == "item")
 		{
 			int x = object.attribute("x").as_int();
@@ -1395,7 +1316,7 @@ void LoadLevel(std::string filename)
 				}
 			}
 
-			Item* i = new Item(x, y, item_name, item_id);
+			Item* i = new Item(&entities, &viewport, player, x, y, item_name, item_id);
 			i->Width = w;
 			i->Height = h;
 			i->killID.MapID = mapid;
@@ -1410,7 +1331,7 @@ void LoadLevel(std::string filename)
 			int y = object.attribute("y").as_int();
 			int mapid = object.attribute("id").as_int();
 
-			MinorHealth* i = new MinorHealth(x, y, "Minor Health");
+			MinorHealth* i = new MinorHealth(player, x, y, "Minor Health");
 			i->Width = 6;
 			i->Height = 7;
 			i->killID.MapID = mapid;
@@ -1419,13 +1340,14 @@ void LoadLevel(std::string filename)
 			entities.push_back(i);
 
 		}
+
 		if (name == "max_health")
 		{
 			int x = object.attribute("x").as_int();
 			int y = object.attribute("y").as_int();
 			int mapid = object.attribute("id").as_int();
 
-			MaximumHealth* i = new MaximumHealth(x, y, "Max Health");
+			MaximumHealth* i = new MaximumHealth(player, x, y, "Max Health");
 			i->Width = 9;
 			i->Height = 9;
 			i->killID.MapID = mapid;
@@ -1447,6 +1369,40 @@ void LoadLevel(std::string filename)
 				}
 			}
 			Viewport::PostMessage(&viewport, &entities, text);
+		}
+		if (name == "chungus")
+		{
+			int value;
+			for (pugi::xml_node property = object.child("properties").first_child(); property; property = property.next_sibling())
+			{
+				std::string name = property.attribute("name").as_string();
+
+				if (name == "value")
+				{
+					value = property.attribute("value").as_int();
+				}
+			}
+			Chungus* c = new Chungus(value);
+			entities.push_back(c);
+		}
+		if (name == "info_flag")
+		{
+			std::string flag = "";
+			bool value;
+			for (pugi::xml_node property = object.child("properties").first_child(); property; property = property.next_sibling())
+			{
+				std::string name = property.attribute("name").as_string();
+
+				if (name == "flag")
+				{
+					flag = property.attribute("value").as_string();
+				}
+				if (name == "value")
+				{
+					value = property.attribute("value").as_bool();
+				}
+			}
+			flags[flag] = value;
 		}
 		if (name == "static_sprite")
 		{
@@ -1508,10 +1464,82 @@ void LoadGame()
 	std::ifstream saveFile("save.bin", std::ios::in | std::ios::binary);
 	if (saveFile.is_open())
 	{
-		ClearEntities();
+		unsigned int n;
+		unsigned int k;
+
+		/* Load killed map IDs */
+		killedmapid.clear();
+		saveFile.read((char*)&n, sizeof(n));
+		for (int i = 0; i < n; i++)
+		{
+			saveFile.read((char*)&k, sizeof(k));
+			char* buf = new char[k + 1];
+			buf[k] = 0;
+			saveFile.read(buf, k);
+			KillID kid;
+			kid.Map = buf;
+			delete(buf);
+			saveFile.read((char*)&kid.MapID, sizeof(kid.MapID));
+			killedmapid.push_back(kid);
+		}
+
+		// load current map
+		saveFile.read((char*)&n, sizeof(n));
+		char* map = new char[n + 1];
+		saveFile.read(map, n);
+		map[n] = 0;
+		LoadLevel(map);
+		delete(map);
+
+		/* Load player values */
+		saveFile.read((char*)&player->X, sizeof(player->X));
+		saveFile.read((char*)&player->Y, sizeof(player->Y));
+		saveFile.read((char*)&player->JustWarped, sizeof(player->JustWarped));
+		saveFile.read((char*)&player->Health, sizeof(player->Health));
+		saveFile.read((char*)&player->MaxHealth, sizeof(player->MaxHealth));
+		saveFile.read((char*)&player->SelectedItem, sizeof(player->SelectedItem));
 		
-		
+		/* Load player inventory */
+		player->Inventory.clear();
+		saveFile.read((char*)&n, sizeof(n));
+		for (int i = 0; i < n; i++)
+		{
+			saveFile.read((char*)&k, sizeof(k));
+			char* id = new char[k + 1];
+			id[k] = 0;
+			saveFile.read(id, k);
+
+			saveFile.read((char*)&k, sizeof(k));
+			char* name = new char[k + 1];
+			name[k] = 0;
+			saveFile.read(name, k);
+
+			HeldItem it = HeldItem(name, id);
+			delete(id);
+			delete(name);
+			saveFile.read((char*)&it.Count, sizeof(it.Count));
+			player->AddItem(it, 1);
+
+			
+		}
+
+		/* Read flags */
+		flags.clear();
+		saveFile.read((char*)&n, sizeof(n));
+		for (int i = 0; i < n; i++)
+		{
+			saveFile.read((char*)&k, sizeof(k));
+			
+			char* flag = new char[k + 1];
+			flag[k] = 0;
+			saveFile.read(flag, k);
+			bool value;
+			saveFile.read((char*)&value, sizeof(value));
+			flags[flag] = value;
+		}
 		saveFile.close();
+		
+		SetGameState(GameStates::Playing);
 	}
 	else
 	{
@@ -1524,9 +1552,65 @@ void SaveGame()
 	// Save game
 	std::ofstream saveFile("save.bin", std::ios::out | std::ios::binary);
 
+	/* Save kill IDs */
+	unsigned int n;
+	unsigned int k;
+
+	/* Save killed map IDs */
+	n = killedmapid.size();
+	saveFile.write((char*)&n, sizeof(n));
+	for (int i = 0; i < n; i++)
+	{
+		KillID kid = killedmapid[i];
+		k = kid.Map.size();
+		saveFile.write((char*)&k, sizeof(k));
+		saveFile.write(kid.Map.c_str(), k);
+		saveFile.write((char*)&kid.MapID, sizeof(kid.MapID));
+	}
+	/* Save current map */
+	n = currentmap.size();
+	saveFile.write((char*)&n, sizeof(n));
+	saveFile.write(currentmap.c_str(), currentmap.size());
+
+	/* Save player values */
+	saveFile.write((char*)&player->X, sizeof(player->X));
+	saveFile.write((char*)&player->Y, sizeof(player->Y));
+	saveFile.write((char*)&player->JustWarped, sizeof(player->JustWarped));
+	saveFile.write((char*)&player->Health, sizeof(player->Health));
+	saveFile.write((char*)&player->MaxHealth, sizeof(player->MaxHealth));
+	saveFile.write((char*)&player->SelectedItem, sizeof(player->SelectedItem));
 	
+	/* Save player inventory */
+	n = player->Inventory.size();
+	saveFile.write((char*)&n, sizeof(n));
+	for (int i = 0; i < n; i++)
+	{
+		HeldItem it = player->Inventory[i];
+		k = it.Id.size();
+		saveFile.write((char*)&k, sizeof(k));
+		saveFile.write(it.Id.c_str(), k);
+		k = it.Name.size();
+		saveFile.write((char*)&k, sizeof(k));
+		saveFile.write(it.Name.c_str(), k);
+		saveFile.write((char*)&it.Count, sizeof(it.Count));
+		
+	}
+
+	/* Save flags */
+	n = flags.size();
+	saveFile.write((char*)&n, sizeof(n));
+	for (const auto &f : flags)
+	{
+		k = f.first.size();
+		saveFile.write((char*)&k, sizeof(k));
+		saveFile.write(f.first.c_str(), k);
+		saveFile.write((char*)&f.second, sizeof(f.second));
+	}
 
 	saveFile.close();
+
+	Mix_PlayChannel(-1, sfx_saveload, 0);
+	SetGameState(GameStates::Playing);
 }
 void ExecuteCommand(std::string command)
 {
@@ -1582,7 +1666,19 @@ void ExecuteCommand(std::string command)
 		else
 		{
 			HeldItem h = HeldItem(v[1], v[2]);
-			player->AddItem(h);
+			player->AddItem(h, 1);
+		}
+	}
+	if (v[0] == "flag")
+	{
+		if (v.size() != 3)
+			cons.Line("Usage: flag [name] [value]");
+		else
+		{
+			if (v[2] == "false" || v[2] == "0")
+				flags[v[1]] = false;
+			if (v[2] == "true" || v[2] == "1")
+				flags[v[1]] = true;
 		}
 	}
 }
@@ -1612,6 +1708,13 @@ void DrawMap(std::vector<Chunk*> ch)
 		{
 			for (int y = 0; y < c->Height; y++)
 			{
+				int nx = x * 32 + c->X * 32;
+				int ny = y * 32 + c->Y * 32;
+				if (nx < -viewport.X - 32 ||
+					nx > -viewport.X + viewport.Width ||
+					ny < -viewport.Y - 32 ||
+					ny > -viewport.Y + viewport.Height) continue;
+
 				const unsigned FLIPPED_HORIZONTALLY_FLAG = 0x80000000;
 				const unsigned FLIPPED_VERTICALLY_FLAG = 0x40000000;
 				const unsigned FLIPPED_DIAGONALLY_FLAG = 0x20000000;
@@ -1672,14 +1775,16 @@ public:
 	}
 	void Update()
 	{
-		if (keys[SDLK_w])
+		if (keys[SDLK_w] || keys[SDLK_UP])
 		{
 			keys[SDLK_w] = false;
+			keys[SDLK_UP] = false;
 			SelectedOption--;
 		}
-		if (keys[SDLK_s])
+		if (keys[SDLK_s] || keys[SDLK_DOWN])
 		{
 			keys[SDLK_s] = false;
+			keys[SDLK_DOWN] = false;
 			SelectedOption++;
 		}
 
@@ -1743,19 +1848,21 @@ public:
 		Options.push_back("Save");
 		Options.push_back("Load");
 		Options.push_back("Options");
-		Options.push_back("Quit");
+		Options.push_back("Quit");	
 		SelectedOption = 0;
 	}
 	void Update()
 	{
-		if (keys[SDLK_w])
+		if (keys[SDLK_w] || keys[SDLK_UP])
 		{
 			keys[SDLK_w] = false;
+			keys[SDLK_UP] = false;
 			SelectedOption--;
 		}
-		if (keys[SDLK_s])
+		if (keys[SDLK_s] || keys[SDLK_DOWN])
 		{
 			keys[SDLK_s] = false;
+			keys[SDLK_DOWN] = false;
 			SelectedOption++;
 		}
 
@@ -1767,7 +1874,10 @@ public:
 				SetGameState(GameStates::Playing);
 				break;
 			case 1:
-				SaveGame();
+				if (flags["save_enabled"])
+					SaveGame();
+				else
+					Mix_PlayChannel(-1, sfx_savefailed, 0);
 				break;
 			case 2:
 				LoadGame();
@@ -1894,32 +2004,80 @@ OptionsMenu optionsmenu;
 
 int main(int argc, char ** argv)
 {
-	srand(time(NULL));
-	entities.clear();
+	// Set flags
+	flags[""] = false;
+	flags["holy_grail_full"] = false;
+	flags["portrait_open"] = false;
+	flags["old_man_released"] = false;
+	flags["noclip"] = false;
+	flags["shadows"] = false;
+	flags["save_enabled"] = true;
 
 	
+	srand(time(NULL));
+	entities.clear();
+	
 	SDL_Event event;
-	int x = 288;
-	int y = 208;
 
 	// init SDL
 
-	SDL_Init(SDL_INIT_VIDEO);
+	SDL_Init(SDL_INIT_EVERYTHING);
+	Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 1024);
 	TTF_Init();
-	window = SDL_CreateWindow("Shadow of the Chungus",
-		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCRW, SCRH, 0);
+	SDL_GL_SetSwapInterval(0);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	window = SDL_CreateWindow(GAMENAME.c_str(),
+		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCRW, SCRH, SDL_WINDOW_OPENGL);
 	SDL_SetWindowFullscreen(window, FULLSCRN);
-	renderer = SDL_CreateRenderer(window, -1, 0);
+	int oglIdx = -1;
+	int nRD = SDL_GetNumRenderDrivers();
+	for (int i = 0; i < nRD; i++)
+	{
+		SDL_RendererInfo info;
+		if (!SDL_GetRenderDriverInfo(i, &info))
+		{
+			if (!strcmp(info.name, "opengl"))
+			{
+				oglIdx = i;
+			}
+		}
+	}
+	renderer = SDL_CreateRenderer(window, oglIdx, SDL_RENDERER_ACCELERATED  | VSYNC ? SDL_RENDERER_PRESENTVSYNC : 0);
+	mainContext = SDL_GL_CreateContext(window);
+	SDL_GL_MakeCurrent(window, mainContext);
+	glewInit();
+	glClearColor(0, 0, 0, 0);
+	glClearDepth(1.0f);                   // Set background depth to farthest
 
-	player = new Player(&solids, &entities, &keys, &viewport, renderer);
-	inventory = Inventory(player);
-	cursor = new Cursor(&entities, renderer);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(0, SCRW, 0, SCRH, 0.1f, 100.0f);
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
+	glEnable(GL_BLEND);
+	glDepthFunc(GL_LESS);
+	glDepthRange(0.0f, 1.0f);
+
+	sfx_warp = Mix_LoadWAV("sfx/warp.wav");
+	sfx_saveload = Mix_LoadWAV("sfx/saveload.wav");
+
+	sfx_savefailed = Mix_LoadWAV("sfx/savefailed.wav");
 	
+	cursor = new Cursor(&entities, renderer);
+	viewport = Viewport(cursor, 0, 0, SCRW, SCRH);
+	player = new Player(cursor, &solids, &entities, &keys, &viewport, renderer);
+	viewport.Focus = player; 
+	inventory = Inventory(player);
 	player->LoadImage(renderer, "gfx/player.bmp");
 
 	viewport.Width = SCRW;
 	viewport.Height = SCRH;
-
+	//glEnable(GL_LIGHTING);
 	SDL_Surface* surf = SDL_LoadBMP("gfx/tilesheet.bmp");
 	tex_tilesheet = SDL_CreateTextureFromSurface(renderer, surf);
 	SDL_FreeSurface(surf);
@@ -1928,12 +2086,11 @@ int main(int argc, char ** argv)
 	
 	LoadLevel("map.tmx");
 
-	SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 	SDL_ShowCursor(SDL_DISABLE);
 	
 
-	Uint32 minimum_fps_delta_time = (1000 / 30); // minimum 6 fps, if the computer is slower than this: slow down.
-	Uint32 last_game_step = SDL_GetTicks(); // initial value
+	double minimum_fps_delta_time = (1000 / 6); // minimum 6 fps, if the computer is slower than this: slow down.
+	double last_game_step = SDL_GetTicks(); // initial value
 
 	expfont = TTF_OpenFont("fonts/arial.ttf", 9);
 	monsterfont = TTF_OpenFont("fonts/arial.ttf", 12);
@@ -1946,7 +2103,7 @@ int main(int argc, char ** argv)
 	SDL_StartTextInput();
 	while (!quit)
 	{
-		Uint32 now = SDL_GetTicks();
+		double now = SDL_GetTicks();
 		previousmousestate = currentmousestate;
 		SDL_GetMouseState(&currentmousestate.X, &currentmousestate.Y);
 		while (SDL_PollEvent(&event)) {
@@ -1971,45 +2128,61 @@ int main(int argc, char ** argv)
 				{
 					Respawn();
 				}
-				else
+					keys[event.key.keysym.sym] = true;
+				if (gamestate == Playing || gamestate == Death)
 				{
-					if (event.key.keysym.sym < 1024)
-						keys[event.key.keysym.sym] = true;
+					if (keys[SDLK_F1])
+						LoadGame();
 				}
-					if (event.key.keysym.sym == SDLK_BACKQUOTE)
+				if (gamestate == Playing)
+				{
+					if (keys[SDLK_F2])
 					{
-						cons.Toggled = !cons.Toggled; continue;
-					}
-					if (keys[SDLK_ESCAPE])
-					{
-						keys[SDLK_ESCAPE] = false;
-						if (gamestate == Playing)
-							SetGameState(GameStates::Paused);
-						else if (gamestate = Paused)
-							SetGameState(GameStates::Playing);
-					}
-					if (cons.Toggled)
-					{
-
-						int sym = event.key.keysym.sym;
-						if (sym == SDLK_RETURN && cons.Buffer != "")
+						if (flags["save_enabled"])
 						{
-							cons.Line(cons.Buffer);
-							ExecuteCommand(cons.Buffer);
-							cons.Buffer = "";
+							SaveGame();
+							Viewport::PostMessage(&viewport, &entities, "Game saved!");
 						}
-						//Handle backspace
-						if (event.key.keysym.sym == SDLK_BACKSPACE && cons.Buffer.length() > 0)
+						else
 						{
-							//lop off character
-							cons.Buffer.pop_back();
+							Viewport::PostMessage(&viewport, &entities, "Cannot save here!");
+							Mix_PlayChannel(-1, sfx_savefailed, 0);
 						}
-
 					}
+				}
+				if (event.key.keysym.sym == SDLK_BACKQUOTE)
+				{
+					cons.Toggled = !cons.Toggled; continue;
+				}
+				if (keys[SDLK_ESCAPE])
+				{
+					keys[SDLK_ESCAPE] = false;
+					if (gamestate == Playing)
+						SetGameState(GameStates::Paused);
+					else if (gamestate = Paused)
+						SetGameState(GameStates::Playing);
+				}
+				if (cons.Toggled)
+				{
+
+					int sym = event.key.keysym.sym;
+					if (sym == SDLK_RETURN && cons.Buffer != "")
+					{
+						cons.Line(cons.Buffer);
+						ExecuteCommand(cons.Buffer);
+						cons.Buffer = "";
+					}
+					//Handle backspace
+					if (event.key.keysym.sym == SDLK_BACKSPACE && cons.Buffer.length() > 0)
+					{
+						//lop off character
+						cons.Buffer.pop_back();
+					}
+
+				}
 				break;
 			case SDL_KEYUP:
-				if (event.key.keysym.sym < 1024)
-					keys[event.key.keysym.sym] = false;
+				keys[event.key.keysym.sym] = false;
 				break;
 			case SDL_MOUSEBUTTONDOWN:
 				if (event.button.button == SDL_BUTTON_LEFT)
@@ -2017,14 +2190,12 @@ int main(int argc, char ** argv)
 					currentmousestate.LeftDown = true;
 					if (!cons.Toggled && gamestate == Playing && player->GetSelectedItemId() == "pistol")
 					{
-						// Draw bullet from player to cursor
-						int x, y;
-						SDL_GetMouseState(&x, &y);
-						Bullet* bl = new Bullet(&viewport, player, &solids, renderer, &entities, atan2(player->Y + viewport.Y - y, player->X + viewport.X - x) + M_PI);
-						bl->LoadImage(renderer, "gfx/" + (std::string)"bullet.bmp");
-						bl->X = player->X;
-						bl->Y = player->Y;
-						entities.push_back(bl);
+						// Draw bullet from player to cursor						
+						player->FireBullet();
+					}
+					else if (player->GetSelectedItemId() == "shotgun")
+					{
+						player->FireShotgun();
 
 					}
 					else if (player->GetSelectedItemId() == "uzi")
@@ -2041,10 +2212,7 @@ int main(int argc, char ** argv)
 				if (event.button.button == SDL_BUTTON_LEFT)
 				{
 					currentmousestate.LeftDown = false;
-					if (gamestate == Playing)
-					{
-						player->NextAttack = -1;
-					}
+					player->NextAttack = -1;
 				}
 				else if (event.button.button == SDL_BUTTON_RIGHT)
 				{
@@ -2052,10 +2220,14 @@ int main(int argc, char ** argv)
 				}
 				break;
 			case SDL_MOUSEWHEEL:
-				if (player->Inventory.size() > 1)
+				if (gamestate == Playing)
 				{
-					player->SelectedItem += event.wheel.y;
-					player->SelectedItem %= player->Inventory.size();
+					if (player->Inventory.size() > 1)
+					{
+						player->SelectedItem += event.wheel.y;
+						if (player->SelectedItem >= player->Inventory.size()) player->SelectedItem = 0;
+						if (player->SelectedItem < 0) player->SelectedItem = player->Inventory.size() - 1;
+					}
 				}
 				break;
 			}
@@ -2069,11 +2241,20 @@ int main(int argc, char ** argv)
 				delta_time = minimum_fps_delta_time; // slow down if the computer is too slow
 			}
 
+			///SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+			//SDL_RenderClear(renderer);
+			
+			glClearColor(0, 0, 0, 0);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			
+			//SDL_GL_SwapWindow(window);
+
 			// Pointer modes
 			if (gamestate == Playing)
 			{
 				if (player->GetSelectedItemId() == "pistol" ||
-					player->GetSelectedItemId() == "uzi")
+					player->GetSelectedItemId() == "uzi" ||
+					player->GetSelectedItemId() == "shotgun")
 					cursor->Mode = Crosshair;
 				else
 					cursor->Mode = Pointer;
@@ -2084,9 +2265,7 @@ int main(int argc, char ** argv)
 			// Order entites by y
 			std::sort(entities.begin(), entities.end(), [](Entity* a, Entity* b) {return a->Y + a->Height * SCALE < b->Y + b->Height * SCALE; });
 			std::sort(entities.begin(), entities.end(), [](Entity* a, Entity* b) {return a->Z < b->Z; });
-			SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-			SDL_RenderClear(renderer);
-
+			
 			if (player->Health <= 0)
 			{
 				SetGameState(GameStates::Death);
@@ -2104,13 +2283,20 @@ int main(int argc, char ** argv)
 					SDL_Point p = { px, py };
 					if (SDL_PointInRect(&p, &warps[i].Rect) && !player->JustWarped)
 					{
-						
+
 						player->TargetWarp = warps[i].TargetWarpID;
 						player->JustWarped = true;
+						Mix_PlayChannel(-1, sfx_warp, 0);
+						
+						if (warps[i].RemoveItems == "all")
+						{
+							player->Inventory.clear();
+						}
+
 						LoadLevel(warps[i].TargetLevel);
 					}
 				}
-				
+
 				bool touchingAnyWarp = false;
 				for (int i = 0; i < warps.size(); i++)
 				{
@@ -2126,10 +2312,41 @@ int main(int argc, char ** argv)
 				if (!touchingAnyWarp) player->JustWarped = false;
 
 				DrawMap(chunks);
+				// Draw shaded areas
+				for (int i = 0; i < shadedareas.size(); i++)
+				{
+					SDL_Rect r = shadedareas[i].Rect;
+					//glUseProgram(shadedareas[i].shader->ID);
+
+					glUseProgram(shadedareas[i].shader->ID);
+					GLint t = glGetUniformLocation(shadedareas[i].shader->ID, "time");
+					glUniform1f(t, SDL_GetTicks());
+					t = glGetUniformLocation(shadedareas[i].shader->ID, "iResolution");
+					glUniform2f(t, viewport.Width, viewport.Height);
+					t = glGetUniformLocation(shadedareas[i].shader->ID, "viewport");
+					glUniform2f(t, viewport.X, viewport.Y);
+					
+					glBegin(GL_QUADS);
+					glVertex2f(r.x + viewport.X, r.y + viewport.Y);
+					glVertex2f(r.x + viewport.X + r.w, r.y + viewport.Y);
+					glVertex2f(r.x + viewport.X + r.w, r.y + viewport.Y + r.h);
+					glVertex2f(r.x + viewport.X, r.y + viewport.Y + r.h);
+					glEnd();
+					glUseProgram(0);
+				}
 				
 				for (unsigned int i = 0; i < entities.size(); i++)
 				{
 					if (!entities[i]->Alive) continue;
+					if (entities[i]->id == "ui") continue;
+					// If entity not inside screen then continue
+					int nx = entities[i]->X;
+					int ny = entities[i]->Y;
+					if ((nx < -viewport.X - entities[i]->Width * SCALE ||
+						nx > -viewport.X + viewport.Width ||
+						ny < -viewport.Y - entities[i]->Height * SCALE ||
+						ny > -viewport.Y + viewport.Height) &&
+						entities[i]->id != "ui") continue;
 
 					if (!cons.Toggled)
 					{
@@ -2143,28 +2360,69 @@ int main(int argc, char ** argv)
 						{
 							entities[i]->OnClick();
 						}
+
+						// If i is player then check against ever trigger
+						if (entities[i]->id == "player")
+						{
+							for (int j = 0; j < triggers.size(); j++)
+							{
+								SDL_Rect p = { entities[i]->X, entities[i]->Y, entities[i]->Width * SCALE, entities[i]->Height * SCALE };
+								
+								if (SDL_HasIntersection(&p, &triggers[j].Rect))
+								{
+									if (triggers[j].NeedsItem != "")
+									{
+										if (player->HasItem(triggers[j].NeedsItem))
+										{
+											flags[triggers[j].FlagName] = triggers[j].FlagValue;
+										}
+									}
+									else
+									{
+										
+										flags[triggers[j].FlagName] = triggers[j].FlagValue;
+									}
+								}
+							}
+						}
 						// Check against every hurt
 						for (int j = 0; j < hurt.size(); j++)
 						{
-							SDL_Point p = { entities[i]->X + entities[i]->Width, entities[i]->Y + entities[i]->Height };
+							SDL_Point p = { entities[i]->X + entities[i]->Width / 2, entities[i]->Y + entities[i]->Height };
 							SDL_Rect b = hurt[j];
 							if (SDL_PointInRect(&p, &b))
 							{
-								entities[i]->Health -= entities[i]->MaxHealth * 0.0005f;
+								entities[i]->Health -= entities[i]->MaxHealth * 0.0002f * delta_time;
 							}
 						}
+						// Check against every heal
+						if (entities[i]->id == "player")
+						{
+							for (int j = 0; j < heal.size(); j++)
+							{
+								SDL_Point p = { entities[i]->X + entities[i]->Width / 2, entities[i]->Y + entities[i]->Height };
+								SDL_Rect b = heal[j];
+								if (SDL_PointInRect(&p, &b))
+								{
+									entities[i]->Health += entities[i]->MaxHealth * 0.0002f * delta_time;
+									if (entities[i]->Health > entities[i]->MaxHealth)
+										entities[i]->Health = entities[i]->MaxHealth;
+								}
+							}
+						}
+						// Start collisions 
 						// Check against every and entity
 						if (entities[i]->IsSolid)
 						{
 							for (int j = 0; j < entities.size(); j++)
 							{
-								if (entities[j]->id == "player") continue;
 								if (i == j) continue;
 								if (!entities[j]->IsSolid) continue;
 
 								SDL_Rect a = { entities[i]->X, entities[i]->Y, entities[i]->Width * entities[i]->SCALE, entities[i]->Height * entities[i]->SCALE };
 								SDL_Rect b = { entities[j]->X, entities[j]->Y, entities[j]->Width * entities[j]->SCALE, entities[j]->Height * entities[j]->SCALE };
 								SDL_Rect r;
+
 
 								double amidx = a.x + a.w / 2;
 								double amidy = a.y + a.h / 2;
@@ -2183,7 +2441,7 @@ int main(int argc, char ** argv)
 											entities[i]->X = b.x + b.w;
 										}
 									}
-									if (r.w > r.h) // Solve vertically
+									else if (r.w > r.h) // Solve vertically
 									{
 										if (amidy < bmidy) // If above push up
 										{
@@ -2201,9 +2459,11 @@ int main(int argc, char ** argv)
 							{
 								if (entities[i]->id == "player")
 								{
-									if (player->HasItem(solids[j].NeedsKey)) continue;
+									if (player->HasItem(solids[j].NeedsKey) >= solids[j].Count) continue;
+									if (flags[solids[j].NeedsFlag]) continue;
+									if (flags["noclip"]) continue;
 								}
-								SDL_Rect a = { entities[i]->X, entities[i]->Y, entities[i]->Width * entities[i]->SCALE, entities[i]->Height * entities[i]->SCALE + 1 };
+								SDL_Rect a = { entities[i]->X-1, entities[i]->Y-1, entities[i]->Width * entities[i]->SCALE+ 2, entities[i]->Height * entities[i]->SCALE + 2 };
 								SDL_Rect b = solids[j].Rect;
 								SDL_Rect r;
 
@@ -2213,6 +2473,7 @@ int main(int argc, char ** argv)
 								double bmidy = b.y + b.h / 2;
 								if (SDL_IntersectRect(&a, &b, &r))
 								{
+									
 									if (r.w < r.h) // Solive horizontally
 									{
 										if (amidx < bmidx) // If to the left then push left
@@ -2238,10 +2499,101 @@ int main(int argc, char ** argv)
 								}
 							}
 						}
+						// End collisions
 					}
 					entities[i]->Draw(viewport, renderer);
 				}
 				
+				
+				if (flags["shadows"])
+					for (unsigned int i = 0; i < solids.size(); i++)
+					{
+						SDL_Rect r = solids[i].Rect;
+
+						if (r.x + r.w < -viewport.X ||
+							r.x > -viewport.X + viewport.Width ||
+							r.y + r.h < -viewport.Y ||
+							r.y > -viewport.Y + viewport.Height) continue;
+						// Cast each point away from player
+						double angle;
+
+						double vertices[4 * 4];
+						// Top left
+						int x = r.x;
+						int y = r.y;
+						angle = atan2(y - player->Y, x - player->X);
+						int x2 = x + cos(angle) * 1000;
+						int y2 = y + sin(angle) * 1000;
+						vertices[0] = x;
+						vertices[1] = y;
+						vertices[2] = x2;
+						vertices[3] = y2;
+						// Top right
+						x = r.x + r.w;
+						y = r.y;
+						angle = atan2(y - player->Y, x - player->X);
+						x2 = x + cos(angle) * 1000;
+						y2 = y + sin(angle) * 1000;
+						vertices[4] = x;
+						vertices[5] = y;
+						vertices[6] = x2;
+						vertices[7] = y2;
+						// bottom left
+						x = r.x;
+						y = r.y + r.h;
+						angle = atan2(y - player->Y, x - player->X);
+						x2 = x + cos(angle) * 1000;
+						y2 = y + sin(angle) * 1000;
+						vertices[8] = x;
+						vertices[9] = y;
+						vertices[10] = x2;
+						vertices[11] = y2;
+						// bottom right
+						x = r.x + r.w;
+						y = r.y + r.h;
+						angle = atan2(y - player->Y, x - player->X);
+						x2 = x + cos(angle) * 1000;
+						y2 = y + sin(angle) * 1000;
+						vertices[12] = x;
+						vertices[13] = y;
+						vertices[14] = x2;
+						vertices[15] = y2;
+						SDL_RenderDrawLine(renderer, x + viewport.X, y + viewport.Y, x2 + viewport.X, y2 + viewport.Y);
+
+						glBegin(GL_QUADS);
+
+						glColor3f(0.0, 0, 0);
+
+						glVertex2f(vertices[0] + viewport.X, vertices[1] + viewport.Y);
+						glVertex2f(vertices[2] + viewport.X, vertices[3] + viewport.Y);
+						glVertex2f(vertices[6] + viewport.X, vertices[7] + viewport.Y);
+						glVertex2f(vertices[4] + viewport.X, vertices[5] + viewport.Y);
+
+						glVertex2f(vertices[4] + viewport.X, vertices[5] + viewport.Y);
+						glVertex2f(vertices[6] + viewport.X, vertices[7] + viewport.Y);
+						glVertex2f(vertices[14] + viewport.X, vertices[15] + viewport.Y);
+						glVertex2f(vertices[12] + viewport.X, vertices[13] + viewport.Y);
+
+						glVertex2f(vertices[2] + viewport.X, vertices[3] + viewport.Y);
+						glVertex2f(vertices[0] + viewport.X, vertices[1] + viewport.Y);
+						glVertex2f(vertices[8] + viewport.X, vertices[9] + viewport.Y);
+						glVertex2f(vertices[10] + viewport.X, vertices[11] + viewport.Y);
+
+						glVertex2f(vertices[8] + viewport.X, vertices[9] + viewport.Y);
+						glVertex2f(vertices[10] + viewport.X, vertices[11] + viewport.Y);
+						glVertex2f(vertices[14] + viewport.X, vertices[15] + viewport.Y);
+						glVertex2f(vertices[12] + viewport.X, vertices[13] + viewport.Y);
+						glEnd();
+
+						
+					}
+
+				for (unsigned int i = 0; i < entities.size(); i++)
+				{
+					if (entities[i]->id != "ui") continue;
+					entities[i]->Update(delta_time);
+					entities[i]->Draw(viewport, renderer);
+				}
 			}
 			else if (gamestate == Death)
 			{
@@ -2260,7 +2612,7 @@ int main(int argc, char ** argv)
 			{
 				// Draw title menu
 				SDL_Surface * s = TTF_RenderText_Solid(titlefont,
-					"Shadow of the Chungus", { 255, 0, 0 });
+					GAMENAME.c_str(), { 255, 0, 0 });
 				int w = s->w;
 				int h = s->h;
 				SDL_Rect expr = { SCRW / 2 - w / 2, SCRH / 4, w, h };
@@ -2293,7 +2645,7 @@ int main(int argc, char ** argv)
 			{
 				// Draw title menu
 				SDL_Surface * s = TTF_RenderText_Solid(titlefont,
-					"Shadow of the Chungus", { 255, 0, 0 });
+					GAMENAME.c_str(), { 255, 0, 0 });
 				int w = s->w;
 				int h = s->h;
 				SDL_Rect expr = { SCRW / 2 - w / 2, SCRH / 4, w, h };
@@ -2306,20 +2658,7 @@ int main(int argc, char ** argv)
 				pausemenu.Draw(renderer, menufont);
 			}
 			// Draw console
-			double dx = player->X - cursor->X + viewport.X;
-			double dy = player->Y - cursor->Y + viewport.Y;
-			double d = 500;
-
-			if (dx > d) dx = d;
-			if (dx < -d) dx = -d;
-			if (dy > d) dy = d;
-			if (dy < -d) dy = -d;
-
-			dx /= 9;
-			dy /= 9;
-
-			viewport.X = -player->X + SCRW / 2 + player->Width / 2 + dx;
-			viewport.Y = -player->Y +SCRH / 2 + player->Height / 2 + dy;
+			viewport.Update(delta_time);
 
 			
 			cursor->Update(delta_time);
@@ -2385,49 +2724,6 @@ int main(int argc, char ** argv)
 				}
 			}
 			
-			// Draw score
-			/*
-			std::stringstream ss;
-			ss << player->DamageInflicted;
-			SDL_Surface * lnsurface = TTF_RenderText_Solid(dmgfont,
-				ss.str().c_str(), { 0, 255, 0 });
-			int lnw = lnsurface->w;
-			int lnh = lnsurface->h;
-			SDL_Rect r = { SCRW - lnw, 0, lnw, lnh };
-			SDL_Texture* lntex = SDL_CreateTextureFromSurface(renderer, lnsurface);
-			SDL_FreeSurface(lnsurface);
-			SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-			SDL_RenderFillRect(renderer, &r);
-			SDL_RenderCopy(renderer, lntex, NULL, &r);
-			SDL_DestroyTexture(lntex);
-			*/
-			/*
-			// Draw experience
-			std::stringstream ss;
-			ss << "Experience: " << player->Experience << "/" << player->NextExperience;
-			SDL_Surface * expsurface = TTF_RenderText_Solid(expfont,
-				ss.str().c_str(), { 0, 0, 0 });
-			int expw = expsurface->w;
-			int exph = expsurface->h;
-			SDL_Rect expr = { SCRW - expw, 0, expw, exph };
-			SDL_Texture* exptex = SDL_CreateTextureFromSurface(renderer, expsurface);
-			SDL_FreeSurface(expsurface);
-			SDL_RenderCopy(renderer, exptex, NULL, &expr);
-			// Draw level
-			ss = std::stringstream();
-			ss << "Level " << player->Level;
-			SDL_Surface * lvlsurface = TTF_RenderText_Solid(expfont,
-				ss.str().c_str(), { 0, 0, 0 });
-			int lvlw = expsurface->w;
-			int lvlh = expsurface->h;
-			SDL_Rect lvlr = { SCRW - lvlw, exph, lvlw, lvlh };
-			SDL_Texture* lvltex = SDL_CreateTextureFromSurface(renderer, lvlsurface);
-			SDL_FreeSurface(lvlsurface);
-			SDL_RenderCopy(renderer, lvltex, NULL, &lvlr);
-			*/
-
-			
-			
 			// Remove non alive entities
 			std::vector<Entity*> ents;
 			for (unsigned int i = 0; i < entities.size(); i++)
@@ -2440,13 +2736,35 @@ int main(int argc, char ** argv)
 				{
 					if (!entities[i]->Respawn && entities[i]->killID.MapID != -1 && !(std::find(killedmapid.begin(), killedmapid.end(), entities[i]->killID) != killedmapid.end()))
 					{
-						killedmapid.push_back(entities[i]->killID);
+						if (entities[i]->killID.MapID != -1)
+							killedmapid.push_back(entities[i]->killID);
 					}
 					delete(entities[i]);
+					continue;
 				}
 
+				if (entities[i]->Action == EntityAction::Dead)
+				{
+					if (entities[i]->killID.MapID != -1)
+						killedmapid.push_back(entities[i]->killID);
+				}
 			}
 			entities = ents;
+			
+			static float r = 0;
+			r += 0.1f;
+			
+		
+			glMatrixMode(GL_MODELVIEW);
+			glPushMatrix();
+			glRotatef(r, 0, 1, 0);
+			glBegin(GL_TRIANGLES);
+			glVertex3f(0, 0, 0);
+			glVertex3f(100, 0, 0);
+			glVertex3f(100, 100, 0);
+			glEnd();
+			glPopMatrix();
+		
 
 			SDL_RenderPresent(renderer);
 
@@ -2459,10 +2777,14 @@ int main(int argc, char ** argv)
 	}
 
 	// cleanup SDL
-	delete(keys);
 	ClearEntities();
-	SDL_DestroyTexture(tex_tilesheet);
 
+	Mix_FreeChunk(sfx_warp);
+	Mix_FreeChunk(sfx_savefailed);
+	Mix_FreeChunk(sfx_saveload);
+
+	SDL_DestroyTexture(tex_tilesheet);
+	SDL_GL_DeleteContext(mainContext);
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window);
 	TTF_CloseFont(deathfont);
@@ -2473,6 +2795,7 @@ int main(int argc, char ** argv)
 	TTF_CloseFont(menufont);
 	TTF_CloseFont(dmgfont);
 	TTF_Quit();
+	Mix_CloseAudio();
 	SDL_Quit();
 
 	return 0;

@@ -4,9 +4,9 @@
 
 
 
-Cursor::Cursor(std::vector<Entity*>* ents, SDL_Renderer* ren)
+Cursor::Cursor(std::vector<Entity*>* ents, SDL_Renderer* ren) :
+	Entity(ents)
 {
-	Entity::Entity(ents);
 	id = "cursor";
 	cur_crosshair = LoadTexture(ren, "gfx/crosshair.bmp");
 	cur_pointer = LoadTexture(ren, "gfx/cursor.bmp");
