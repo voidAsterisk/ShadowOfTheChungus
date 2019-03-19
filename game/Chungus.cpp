@@ -13,6 +13,6 @@ Chungus::Chungus(int value)
 void Chungus::Draw(Viewport vp, SDL_Renderer* ren)
 {
 	
-	//Model->Draw();
+	Model->Draw();
 	glUseProgram(0);
 }
