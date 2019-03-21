@@ -15,6 +15,7 @@ class Fireball :
 	std::vector<Entity*>* e;
 	std::vector<Solid>* s;
 	Mix_Chunk* sfx_flame;
+	Mix_Chunk* sfx_out;
 public:
 	double DestX;
 	double DestY;

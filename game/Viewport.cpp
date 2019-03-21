@@ -35,6 +35,9 @@ void Viewport::Update(double dt)
 		if (dy > d) dy = d;
 		if (dy < -d) dy = -d;
 
+		c->X += dx;
+		c->Y += dy;
+
 		dx /= 9;
 		dy /= 9;
 		X = -Focus->X + Width / 2 + Focus->Width / 2 + dx;

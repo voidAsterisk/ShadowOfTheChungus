@@ -1,18 +1,25 @@
 #pragma once
+#include <SDL_mixer.h>
 #include <SDL.h>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
+#include <vector>
+#include <sstream>
 #include "Entity.h"
-class Model_OBJ;
+//class Model_OBJ;
+class Player;
 class Viewport;
-class Shader;
 class Chungus :
 	public Entity
 {
-	Model_OBJ* Model;
-	Shader* shader;
+	//Model_OBJ* Model;
+	//Shader* shader;
+	Player* p;
+	Mix_Chunk* sfx_ding;
+	Viewport* v;
+	std::vector<Entity*>* e;
 public:
-	Chungus(int value);
-	virtual void Draw(Viewport vp, SDL_Renderer* ren);
+	int Value;
+	Chungus(Viewport* viewport, std::vector<Entity*>* entities, SDL_Renderer* ren, int value);
+	~Chungus();
+	virtual void Update(double dt);
 };
 

@@ -47,13 +47,13 @@
 #pragma comment (lib, "glew32")
 #pragma comment (lib, "glu32")
 #pragma comment (lib, "opengl32")
-#pragma comment (lib, "libfbxsdk-md")
 Cursor* cursor;
 
 SDL_GLContext mainContext;
 
 
 TTF_Font * expfont;
+TTF_Font * chungus_font;
 TTF_Font* deathfont;
 TTF_Font* titlefont;
 TTF_Font* menufont;
@@ -83,7 +83,7 @@ static int SCRW = 1280;
 static int SCRH = 720;
 static bool FULLSCRN = false;
 static bool VSYNC = false;
-std::string GAMENAME = "Sasha";
+std::string GAMENAME = "Shadow of the Chungus";
 static std::map<int, bool> keys;
 static SDL_Renderer* renderer;
 static Viewport viewport;
@@ -93,13 +93,14 @@ static Player* player;
 
 static SDL_Window* window;
 static SDL_Texture* tex_tilesheet;
-
+SDL_Texture* chungus_tex;
 enum GameStates {
 	TitleMenu,
 	Playing,
 	Death,
 	Paused,
-	Options
+	Options,
+	StartIntro
 };
 static GameStates gamestate = TitleMenu;
 static GameStates lastgamestate;
@@ -108,10 +109,36 @@ static MouseState currentmousestate, previousmousestate;
 void SetGameState(GameStates gs);
 void ClearEntities();
 
+struct IntroSequence
+{
+	int StartTime;
+	Mix_Chunk* mus_introvoice;
+	Mix_Chunk* mus_intro;
+	static const int numintros = 8;
+	SDL_Texture* tex_intro[numintros];
+};
+IntroSequence is;
 void SetGameState(GameStates gs)
 {
 	lastgamestate = gamestate;
 	gamestate = gs;
+
+	if (gs == StartIntro)
+	{
+		is.StartTime = SDL_GetTicks();
+		is.mus_introvoice = Mix_LoadWAV("sfx/intro.wav");
+		is.mus_intro = Mix_LoadWAV("sfx/intromusic.wav");
+		is.tex_intro[0] = Entity::LoadTexture(renderer, "gfx/intro0.bmp");
+		is.tex_intro[1] = Entity::LoadTexture(renderer, "gfx/intro1.bmp");
+		is.tex_intro[2] = Entity::LoadTexture(renderer, "gfx/intro2.bmp");
+		is.tex_intro[3] = Entity::LoadTexture(renderer, "gfx/intro3.bmp");
+		is.tex_intro[4] = Entity::LoadTexture(renderer, "gfx/intro4.bmp");
+		is.tex_intro[5] = Entity::LoadTexture(renderer, "gfx/intro5.bmp");
+		is.tex_intro[6] = Entity::LoadTexture(renderer, "gfx/intro6.bmp");
+		is.tex_intro[7] = Entity::LoadTexture(renderer, "gfx/intro7.bmp");
+		Mix_PlayChannel(-1, is.mus_introvoice, 0);
+		Mix_PlayChannel(-1, is.mus_intro, 0);
+	}
 }
 
 void ClearEntities()
@@ -158,8 +185,11 @@ protected:
 	Player* p;
 	std::vector<Solid>* s;
 public:
+	int ChungusDrop = 1;
+	int DropRate = 0;
 	Enemy(std::vector<Solid>* solids, Player* player)
 	{
+		TakesDamage = true;
 		s = solids;
 		p = player;
 		id = "enemy";
@@ -267,6 +297,13 @@ public:
 			IsSolid = false;
 			if (!OnDieExecuted)
 			{
+				// Drop chungus if drop rate
+				if (rand() % 100 <= DropRate) {
+					Chungus* c = new Chungus(&viewport, &entities, renderer, ChungusDrop);
+					c->X = X;
+					c->Y = Y;
+					entities.push_back(c);
+				}
 				OnDie();
 				OnDieExecuted = true;
 			}
@@ -306,6 +343,7 @@ public:
 		MaxVelocity = 0.02;
 		Width = 6;
 		Height = 5;
+		DropRate = 100;
 	}
 	virtual void Update(double dt)
 	{
@@ -357,6 +395,8 @@ public:
 		AggroDistance = 160000;
 		AttackDistance = 30000;
 		IsAggro = true;
+		ChungusDrop = 2;
+		DropRate = 5;
 	}
 	virtual void Update(double dt)
 	{
@@ -379,6 +419,68 @@ public:
 			AnimationY = 0;
 			AnimationX += 0.01 * dt;
 			if (AnimationX >= 2) AnimationX = 0;
+		}
+		if (Action == EntityAction::Attacking || Action == EntityAction::Aggro)
+		{
+			if (NextAttack <= SDL_GetTicks())
+			{
+				// Launch fireball
+				Fireball* fb = new Fireball(&solids, player, renderer, &entities, X, Y, player->X + player->Width * SCALE / 2, player->Y + player->Height * SCALE / 2);
+				fb->LoadImage(renderer, "gfx/fireball.bmp");
+				entities.push_back(fb);
+				NextAttack = SDL_GetTicks() + AttackTimeout;
+			}
+		}
+	}
+};
+
+class Sorcerer :
+	public Enemy
+{
+public:
+	Sorcerer(std::vector<Solid>* solids, Player* player, double x, double y) :
+		Enemy(solids, player)
+	{
+		X = x;
+		Y = y;
+		id = "sorcerer";
+		Level = 5;
+		Name = "Sorcerer";
+		Action = Standing;
+
+		Width = 7;
+		Height = 16;
+		Health = 20;
+		MaxHealth = 20;
+		MaxVelocity = 0.12f;
+		AttackTimeout = 200;
+		AggroDistance = 200000;
+		AttackDistance = 160000;
+		IsAggro = true;
+		Wander = false;
+		ChungusDrop = 10;
+		DropRate = 10;
+	}
+	virtual void Update(double dt)
+	{
+		Enemy::Update(dt);
+		if (Action == EntityAction::Dead) // if dead
+		{
+			AnimationY = 2;
+			AnimationX = 0;
+		}
+		if (Action == Moving ||
+			Action == Aggro)
+		{
+			AnimationY = 1;
+			AnimationX += 0.01 * dt;
+			if (AnimationX >= 2) AnimationX = 0;
+		}
+		if (Action == Standing ||
+			Action == Attacking)
+		{
+			AnimationY = 0;
+			AnimationX = 0;
 		}
 		if (Action == EntityAction::Attacking || Action == EntityAction::Aggro)
 		{
@@ -417,6 +519,8 @@ public:
 		AttackDistance = 600;
 		Respawn = true;
 		IsAggro = true;
+		ChungusDrop = 2;
+		DropRate = 2;
 	}
 	virtual void Update(double dt)
 	{
@@ -483,9 +587,10 @@ public:
 		AttackTimeout = 2500;
 		AggroDistance = 28000;
 		AttackDistance = 600;
-		Respawn = true;
 		IsAggro = true;
 		BloodSplatter = false;
+		ChungusDrop = 5;
+		DropRate = 5;
 	}
 	virtual void Update(double dt)
 	{
@@ -552,8 +657,9 @@ public:
 		AttackTimeout = 2500;
 		AggroDistance = 28000;
 		AttackDistance = 600;
-		Respawn = true;
 		IsAggro = true;
+		ChungusDrop = 5;
+		DropRate = 5;
 	}
 	virtual void Update(double dt)
 	{
@@ -620,7 +726,8 @@ public:
 		AttackTimeout = 3000;
 		AggroDistance = 160000;
 		AttackDistance = 100000;
-		Respawn = false;
+		ChungusDrop = 2;
+		DropRate = 5;
 	}
 	virtual void Update(double dt)
 	{
@@ -688,6 +795,8 @@ public:
 		AttackDistance = 40000;
 
 		IsAggro = true;
+		ChungusDrop = 150;
+		DropRate = 100;
 	}
 	virtual void Update(double dt) 
 	{ // Check line of sight
@@ -816,6 +925,7 @@ Inventory inventory;
 
 void LoadLevel(std::string filename)
 {
+	int spawncounter = 0;
 	currentmap = filename;
 	ClearEntities();
 	entities.push_back(player);
@@ -827,7 +937,6 @@ void LoadLevel(std::string filename)
 	shadedareas.clear();
 	pugi::xml_document doc;
 	pugi::xml_parse_result result = doc.load_file(("maps/" + filename).c_str());
-
 	for (pugi::xml_node chunk = doc.child("map").child("layer").child("data").child("chunk"); chunk; chunk = chunk.next_sibling("chunk"))
 	{
 		int x = chunk.attribute("x").as_int();
@@ -867,10 +976,7 @@ void LoadLevel(std::string filename)
 	{
 		std::string name = object.attribute("name").as_string();
 		KillID k = KillID(object.attribute("id").as_int(), currentmap);
-		if (std::find(killedmapid.begin(), killedmapid.end(), k) != killedmapid.end())
-		{
-			continue;
-		}
+		if (k.IsKilled(killedmapid)) continue;
 		if (name == "solid")
 		{
 			int x = object.attribute("x").as_int();
@@ -1030,12 +1136,15 @@ void LoadLevel(std::string filename)
 			int w = object.attribute("width").as_int();
 			int h = object.attribute("height").as_int();
 			int mapid = object.attribute("id").as_int();
+			srand(mapid);
+			
 			std::string spawn_id;
 			int num;
 			for (pugi::xml_node property = object.child("properties").first_child(); property; property = property.next_sibling())
 			{
 				std::string name = property.attribute("name").as_string();
 
+				
 				if (name == "spawn_id")
 				{
 					spawn_id = property.attribute("value").as_string();
@@ -1045,65 +1154,82 @@ void LoadLevel(std::string filename)
 					num = property.attribute("value").as_int();
 				}
 			}
+			
 			for (int i = 0; i < num; i++)
 			{
+				spawncounter--;
+				KillID kid;
+				kid.Map = currentmap;
+				kid.MapID = spawncounter;
+				
+				if (kid.IsKilled(killedmapid)) continue;
+
 				int nx = x + (rand() % (int)(w - w * 0.05f) + w * 0.01f);
 				int ny = y + (rand() % (int)(h - h * 0.05f) + h * 0.01f);
 
 				if (spawn_id == "critter")
 				{
 					Critter* crit = new Critter(&solids, player, nx, ny);
-					crit->killID.MapID = -1;
-					crit->killID.Map = currentmap;
 					crit->LoadImage(renderer, "gfx/critter.bmp");
+					crit->Spawned = true;
+					crit->killID = kid;
 					entities.push_back(crit);
 				}
 				if (spawn_id == "fire_critter")
 				{
 					FireCritter* crit = new FireCritter(&solids, player, nx, ny);
-					crit->killID.MapID = -1;
-					crit->killID.Map = currentmap;
 					crit->LoadImage(renderer, "gfx/fire_critter.bmp");
+					crit->Spawned = true;
+					crit->killID = kid;
 					entities.push_back(crit);
 				}
 				if (spawn_id == "zombie_critter")
 				{
 					ZombieCritter* crit = new ZombieCritter(&solids, player, nx, ny);
-					crit->killID.MapID = -1;
-					crit->killID.Map = currentmap;
 					crit->LoadImage(renderer, "gfx/zombie_critter.bmp");
+					crit->Spawned = true;
+					crit->killID.Map = currentmap;
+					crit->killID.MapID - mapid - i;
 					entities.push_back(crit);
 				}
 				if (spawn_id == "skeleton")
 				{
 					Skeleton* s = new Skeleton(&solids, player, nx, ny);
-					s->killID.MapID = -1;
-					s->killID.Map = currentmap;
 					s->LoadImage(renderer, "gfx/skeleton.bmp");
+					s->Spawned = true;
+					s->killID = kid;
+					entities.push_back(s);
+				}
+				if (spawn_id == "sorcerer")
+				{
+					Skeleton* s = new Skeleton(&solids, player, nx, ny);
+					s->LoadImage(renderer, "gfx/sorcerer.bmp");
+					s->Spawned = true;
+					s->killID = kid;
 					entities.push_back(s);
 				}
 				if (spawn_id == "zombie")
 				{
 					Zombie* s = new Zombie(&solids, player, nx, ny);
-					s->killID.MapID = -1;
-					s->killID.Map = currentmap;
 					s->LoadImage(renderer, "gfx/zombie.bmp");
+					s->Spawned = true;
+					s->killID = kid;
 					entities.push_back(s);
 				}
 				if (spawn_id == "big_zombie_critter")
 				{
 					BigZombieCritter* crit = new BigZombieCritter(&solids, player, nx, ny);
-					crit->killID.MapID = -1;
-					crit->killID.Map = currentmap;
 					crit->LoadImage(renderer, "gfx/big_zombie_critter.bmp");
+					crit->Spawned = true;
+					crit->killID = kid;
 					entities.push_back(crit);
 				}
 				if (spawn_id == "king_critter")
 				{
 					KingCritter* crit = new KingCritter(&solids, player, nx, ny);
-					crit->killID.MapID = -1;
-					crit->killID.Map = currentmap;
 					crit->LoadImage(renderer, "gfx/king_critter.bmp");
+					crit->Spawned = true;
+					crit->killID = kid;
 					entities.push_back(crit);
 				}
 			}
@@ -1178,6 +1304,17 @@ void LoadLevel(std::string filename)
 			s->killID.MapID = mapid;
 			s->killID.Map = currentmap;
 			s->LoadImage(renderer, "gfx/skeleton.bmp");
+			entities.push_back(s);
+		}
+		if (name == "sorcerer")
+		{
+			int x = object.attribute("x").as_int();
+			int y = object.attribute("y").as_int();
+			int mapid = object.attribute("id").as_int();
+			Sorcerer* s = new Sorcerer(&solids, player, x, y);
+			s->killID.MapID = mapid;
+			s->killID.Map = currentmap;
+			s->LoadImage(renderer, "gfx/sorcerer.bmp");
 			entities.push_back(s);
 		}
 		if (name == "zombie")
@@ -1373,6 +1510,9 @@ void LoadLevel(std::string filename)
 		if (name == "chungus")
 		{
 			int value;
+			int x = object.attribute("x").as_int();
+			int y = object.attribute("y").as_int();
+			int mapid = object.attribute("id").as_int();
 			for (pugi::xml_node property = object.child("properties").first_child(); property; property = property.next_sibling())
 			{
 				std::string name = property.attribute("name").as_string();
@@ -1382,7 +1522,11 @@ void LoadLevel(std::string filename)
 					value = property.attribute("value").as_int();
 				}
 			}
-			Chungus* c = new Chungus(value);
+			Chungus* c = new Chungus(&viewport, &entities, renderer, value);
+			c->X = x;
+			c->Y = y;
+			c->killID.MapID = mapid;
+			c->killID.Map = currentmap;
 			entities.push_back(c);
 		}
 		if (name == "info_flag")
@@ -1498,7 +1642,8 @@ void LoadGame()
 		saveFile.read((char*)&player->Health, sizeof(player->Health));
 		saveFile.read((char*)&player->MaxHealth, sizeof(player->MaxHealth));
 		saveFile.read((char*)&player->SelectedItem, sizeof(player->SelectedItem));
-		
+		saveFile.read((char*)&player->Chunguses, sizeof(player->Chunguses));
+
 		/* Load player inventory */
 		player->Inventory.clear();
 		saveFile.read((char*)&n, sizeof(n));
@@ -1579,6 +1724,7 @@ void SaveGame()
 	saveFile.write((char*)&player->Health, sizeof(player->Health));
 	saveFile.write((char*)&player->MaxHealth, sizeof(player->MaxHealth));
 	saveFile.write((char*)&player->SelectedItem, sizeof(player->SelectedItem));
+	saveFile.write((char*)&player->Chunguses, sizeof(player->Chunguses));
 	
 	/* Save player inventory */
 	n = player->Inventory.size();
@@ -1685,8 +1831,18 @@ void ExecuteCommand(std::string command)
 
 
 
-void Respawn()
+void Respawn(bool FromStart = false)
 {
+	// Check if save file exists and if so load it
+	if (!FromStart)
+	{
+		std::fstream savefile("save.bin");
+		if (savefile.is_open())
+		{
+			LoadGame();
+			return;
+		}
+	}
 	player->TargetWarp = -1;
 	LoadLevel("map.tmx");
 	SetGameState(GameStates::Playing);
@@ -1694,6 +1850,7 @@ void Respawn()
 	player->Inventory.clear();
 	player->SelectedItem = -1;
 	player->NextAttack = -1;
+	player->Chunguses = 0;
 	killedmapid.clear();
 }
 
@@ -1771,7 +1928,13 @@ public:
 		Options.push_back("Load Game");
 		Options.push_back("Options");
 		Options.push_back("Quit");
-		SelectedOption = 0;
+
+		// Check if save file exists
+		std::fstream savefile("save.bin");
+		if (savefile.is_open())
+			SelectedOption = 1;
+		else
+			SelectedOption = 0;
 	}
 	void Update()
 	{
@@ -1792,8 +1955,9 @@ public:
 		{
 			switch (SelectedOption)
 			{
-			case 0:
-				Respawn();
+			case 0: // New game
+				SetGameState(StartIntro);
+				//Respawn();
 				break;
 			case 1:
 				LoadGame();
@@ -2023,7 +2187,7 @@ int main(int argc, char ** argv)
 	// init SDL
 
 	SDL_Init(SDL_INIT_EVERYTHING);
-	Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 1024);
+	Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 6, 1024);
 	TTF_Init();
 	SDL_GL_SetSwapInterval(0);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
@@ -2073,6 +2237,7 @@ int main(int argc, char ** argv)
 	inventory = Inventory(player);
 	player->LoadImage(renderer, "gfx/player.bmp");
 
+	chungus_tex = Entity::LoadTexture(renderer, "gfx/chungus5.bmp");
 	viewport.Width = SCRW;
 	viewport.Height = SCRH;
 	//glEnable(GL_LIGHTING);
@@ -2091,6 +2256,7 @@ int main(int argc, char ** argv)
 	double last_game_step = SDL_GetTicks(); // initial value
 
 	expfont = TTF_OpenFont("fonts/arial.ttf", 9);
+	chungus_font = TTF_OpenFont("fonts/chungus.ttf", 32);
 	monsterfont = TTF_OpenFont("fonts/arial.ttf", 12);
 	deathfont = TTF_OpenFont("fonts/lunchds.ttf", 36);
 	msgfont = TTF_OpenFont("fonts/biscuit.ttf", 17);
@@ -2122,6 +2288,11 @@ int main(int argc, char ** argv)
 				}
 				break;
 			case SDL_KEYDOWN:
+				if (gamestate == GameStates::StartIntro)
+				{
+					Mix_HaltChannel(-1);
+					Respawn(true);
+				}
 				if (gamestate == Death)
 				{
 					Respawn();
@@ -2245,7 +2416,7 @@ int main(int argc, char ** argv)
 			glClearColor(0, 0, 0, 1);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			//glMatrixMode(GL_MODELVIEW);
-			/glLoadIdentity();
+			//glLoadIdentity();
 			glColor4f(1, 1, 1, 1);
 			//SDL_GL_SwapWindow(window);
 
@@ -2346,7 +2517,12 @@ int main(int argc, char ** argv)
 						nx > -viewport.X + viewport.Width ||
 						ny < -viewport.Y - entities[i]->Height * SCALE ||
 						ny > -viewport.Y + viewport.Height) &&
-						entities[i]->id != "ui") continue;
+						entities[i]->id != "ui")
+					{
+						if (!cons.Toggled)
+							entities[i]->Update(delta_time);
+							continue;
+					}
 
 					if (!cons.Toggled)
 					{
@@ -2657,6 +2833,48 @@ int main(int argc, char ** argv)
 				pausemenu.Update();
 				pausemenu.Draw(renderer, menufont);
 			}
+			else if (gamestate == StartIntro)
+			{
+				int t = SDL_GetTicks();
+				int st = is.StartTime;
+				int d = t - st;
+				if (d < 4000)
+				{
+					SDL_RenderCopy(renderer, is.tex_intro[0], NULL, NULL);
+				}
+				else if (d < 8000)
+				{
+					SDL_RenderCopy(renderer, is.tex_intro[1], NULL, NULL);
+				}
+				else if (d < 10000)
+				{
+					SDL_RenderCopy(renderer, is.tex_intro[2], NULL, NULL);
+				}
+				else if (d < 15000)
+				{
+					SDL_RenderCopy(renderer, is.tex_intro[3], NULL, NULL);
+				}
+				else if (d < 20000)
+				{
+					SDL_RenderCopy(renderer, is.tex_intro[4], NULL, NULL);
+				}
+				else if (d < 24000)
+				{
+					SDL_RenderCopy(renderer, is.tex_intro[5], NULL, NULL);
+				}
+				else if (d < 32000)
+				{
+					SDL_RenderCopy(renderer, is.tex_intro[6], NULL, NULL);
+				}
+				else if (d < 39000)
+				{
+					SDL_RenderCopy(renderer, is.tex_intro[7], NULL, NULL);
+				}
+				else
+				{
+					;;
+				}
+			}
 			// Draw console
 			viewport.Update(delta_time);
 
@@ -2685,6 +2903,21 @@ int main(int argc, char ** argv)
 				if (r.w <= 0) r.w = 0;
 				SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
 				SDL_RenderFillRect(renderer, &r);
+
+				// Draw chunguses
+				std::stringstream ss;
+				ss << player->Chunguses;
+				SDL_Surface * s = TTF_RenderText_Solid(chungus_font,ss.str().c_str(), { 255, 255, 255 });
+				SDL_Rect expr = { 5, 25, s->w, s->h };
+				SDL_Texture* t = SDL_CreateTextureFromSurface(renderer, s);
+				SDL_FreeSurface(s);
+				SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+				SDL_Rect rc = { expr.x, expr.y, expr.w + 30, expr.h };
+				SDL_RenderFillRect(renderer, &rc);
+				SDL_RenderCopy(renderer, t, NULL, &expr);
+				SDL_DestroyTexture(t);
+				SDL_Rect cr = { expr.x + expr.w, expr.y, 30, 19*2 };
+				SDL_RenderCopy(renderer, chungus_tex, NULL, &cr);
 			}
 
 			cursor->Draw(renderer);
@@ -2734,19 +2967,17 @@ int main(int argc, char ** argv)
 				}
 				else
 				{
-					if (!entities[i]->Respawn && entities[i]->killID.MapID != -1 && !(std::find(killedmapid.begin(), killedmapid.end(), entities[i]->killID) != killedmapid.end()))
+					if (!entities[i]->killID.IsKilled(killedmapid))
 					{
-						if (entities[i]->killID.MapID != -1)
-							killedmapid.push_back(entities[i]->killID);
+						killedmapid.push_back(entities[i]->killID);
 					}
 					delete(entities[i]);
 					continue;
 				}
 
-				if (entities[i]->Action == EntityAction::Dead)
+				if (entities[i]->Action == EntityAction::Dead && !entities[i]->killID.IsKilled(killedmapid))
 				{
-					if (entities[i]->killID.MapID != -1)
-						killedmapid.push_back(entities[i]->killID);
+					killedmapid.push_back(entities[i]->killID);
 				}
 			}
 			entities = ents;
@@ -2763,12 +2994,18 @@ int main(int argc, char ** argv)
 
 	// cleanup SDL
 	ClearEntities();
-
+	Mix_FreeChunk(is.mus_introvoice);
+	Mix_FreeChunk(is.mus_intro);
 	Mix_FreeChunk(sfx_warp);
 	Mix_FreeChunk(sfx_savefailed);
 	Mix_FreeChunk(sfx_saveload);
 
+	for (int i = 0; i < is.numintros; i++)
+	{
+		SDL_DestroyTexture(is.tex_intro[i]);
+	}
 	SDL_DestroyTexture(tex_tilesheet);
+	SDL_DestroyTexture(chungus_tex);
 	SDL_GL_DeleteContext(mainContext);
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window);

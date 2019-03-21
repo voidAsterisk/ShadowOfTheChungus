@@ -79,13 +79,7 @@ void Bullet::Update(double dt)
 		if (!(*EntityListPointer)[i]->Alive ||
 			 (*EntityListPointer)[i]->Action == EntityAction::Dead) continue;
 
-		if ((*EntityListPointer)[i]->id == "critter" ||
-			(*EntityListPointer)[i]->id == "zombie_critter" ||
-			(*EntityListPointer)[i]->id == "fire_critter" ||
-			(*EntityListPointer)[i]->id == "king_critter" ||
-			(*EntityListPointer)[i]->id == "big_zombie_critter" ||
-			(*EntityListPointer)[i]->id == "skeleton" ||
-			(*EntityListPointer)[i]->id == "zombie")
+		if ((*EntityListPointer)[i]->TakesDamage)
 		{
 			if (lineRect(lastX, lastY, X, Y, (*EntityListPointer)[i]->X, (*EntityListPointer)[i]->Y, (*EntityListPointer)[i]->Width * SCALE, (*EntityListPointer)[i]->Height * SCALE))
 			{
@@ -115,7 +109,7 @@ void Bullet::Update(double dt)
 
 				// Special effect freeze the game for a little bit
 				PlayRandomImpactSound();
-				v->Shake(2);
+				v->Shake(0.25f);
 				return;
 
 			}

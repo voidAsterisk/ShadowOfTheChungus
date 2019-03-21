@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.2" tiledversion="1.2.2" orientation="orthogonal" renderorder="right-down" width="100" height="100" tilewidth="32" tileheight="32" infinite="1" nextlayerid="3" nextobjectid="63">
+<map version="1.2" tiledversion="1.2.3" orientation="orthogonal" renderorder="right-down" width="100" height="100" tilewidth="32" tileheight="32" infinite="1" nextlayerid="3" nextobjectid="68">
  <tileset firstgid="1" source="../tilesheet.tsx"/>
  <layer id="1" name="Tile Layer 1" width="100" height="100">
   <data encoding="csv">
@@ -161,10 +161,33 @@
    </properties>
    <point/>
   </object>
-  <object id="62" name="info_flag" x="96" y="128">
+  <object id="63" name="chungus" x="288" y="-608">
    <properties>
-    <property name="flag" value="save_enabled"/>
-    <property name="value" type="bool" value="true"/>
+    <property name="value" type="int" value="5"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="64" name="chungus" x="-280" y="-612">
+   <properties>
+    <property name="value" type="int" value="5"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="65" name="chungus" x="-288" y="-96">
+   <properties>
+    <property name="value" type="int" value="5"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="66" name="chungus" x="288" y="-96">
+   <properties>
+    <property name="value" type="int" value="5"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="67" name="chungus" x="0" y="-192">
+   <properties>
+    <property name="value" type="int" value="20"/>
    </properties>
    <point/>
   </object>

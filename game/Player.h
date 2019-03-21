@@ -24,6 +24,7 @@ class Player : public Entity
 	double SprintVelocity;
 	bool moving;
 public:
+	int Chunguses = 0;
 	int Experience = 0;
 	bool JustWarped = false;
 	int TargetWarp = -1;

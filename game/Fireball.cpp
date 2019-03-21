@@ -23,6 +23,7 @@ Fireball::Fireball(std::vector<Solid>* solids, Player* player, SDL_Renderer* ren
 
 	IsSolid = false;
 	sfx_flame = Mix_LoadWAV("sfx/flame.wav");
+	sfx_out = Mix_LoadWAV("sfx/fire_out.wav");
 	Mix_PlayChannel(-1, sfx_flame, 0);
 }
 
@@ -31,6 +32,7 @@ Fireball::~Fireball()
 {
 	Entity::~Entity();
 	Mix_FreeChunk(sfx_flame);
+	Mix_FreeChunk(sfx_out);
 }
 
 void Fireball::Update(double dt)
@@ -42,6 +44,7 @@ void Fireball::Update(double dt)
 
 	if (length <= MaxVelocity * dt)
 	{
+		Mix_PlayChannel(-1, sfx_out, 0);
 		Alive = false;
 
 		// Spawn shot decal

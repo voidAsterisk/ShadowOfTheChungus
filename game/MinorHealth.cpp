@@ -29,7 +29,7 @@ void MinorHealth::Update(double dt)
 	if (SDL_HasIntersection(&pr, &r) && p->Health != p->MaxHealth)
 	{
 		this->Alive = false;
-		p->AddHealth(p->MaxHealth * 0.2f);
+		p->Health += 2;
 		Mix_PlayChannel(-1, sfx_pickup, 0);
 	}
 }

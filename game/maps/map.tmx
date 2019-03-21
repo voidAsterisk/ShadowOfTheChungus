@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.2" tiledversion="1.2.3" orientation="orthogonal" renderorder="right-down" width="100" height="100" tilewidth="32" tileheight="32" infinite="1" nextlayerid="3" nextobjectid="665">
+<map version="1.2" tiledversion="1.2.3" orientation="orthogonal" renderorder="right-down" width="100" height="100" tilewidth="32" tileheight="32" infinite="1" nextlayerid="3" nextobjectid="698">
  <tileset firstgid="1" source="../tilesheet.tsx"/>
  <layer id="1" name="Tile Layer 1" width="100" height="100">
   <data encoding="csv">
@@ -8716,7 +8716,7 @@
    </properties>
    <point/>
   </object>
-  <object id="654" name="info_flag" x="128" y="384">
+  <object id="654" name="info_flag" x="224" y="384">
    <properties>
     <property name="flag" value="save_enabled"/>
     <property name="value" type="bool" value="true"/>
@@ -8732,9 +8732,214 @@
   <object id="661" name="solid" x="3552" y="-2528" width="32" height="6112"/>
   <object id="662" name="solid" x="-2048" y="3552" width="5600" height="32"/>
   <object id="663" name="solid" x="-2048" y="-2528" width="32" height="6080"/>
-  <object id="664" name="chungus" x="128" y="256">
+  <object id="664" name="chungus" x="128" y="320">
+   <properties>
+    <property name="value" type="int" value="5"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="665" name="chungus" x="128" y="256">
    <properties>
     <property name="value" type="int" value="1"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="666" name="chungus" x="128" y="384">
+   <properties>
+    <property name="value" type="int" value="1"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="667" name="chungus" x="864" y="192">
+   <properties>
+    <property name="value" type="int" value="1"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="668" name="chungus" x="704" y="704">
+   <properties>
+    <property name="value" type="int" value="1"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="669" name="chungus" x="1568" y="736">
+   <properties>
+    <property name="value" type="int" value="1"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="670" name="chungus" x="1568" y="1184">
+   <properties>
+    <property name="value" type="int" value="1"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="671" name="chungus" x="1568" y="1632">
+   <properties>
+    <property name="value" type="int" value="1"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="672" name="chungus" x="1600" y="1888">
+   <properties>
+    <property name="value" type="int" value="5"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="673" name="npc" x="1664" y="704">
+   <properties>
+    <property name="alt_dialog" value=""/>
+    <property name="dialog" value="HE WHO CONTROLS THE CHUNGUS CONTROLS THE UNIVERSE!"/>
+    <property name="dialog_flag" value=""/>
+    <property name="dialog_item" value=""/>
+    <property name="height" type="int" value="16"/>
+    <property name="name" value="Crazy Old Man"/>
+    <property name="sprite" value="old_man2.bmp"/>
+    <property name="width" type="int" value="7"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="674" name="chungus" x="2304" y="544">
+   <properties>
+    <property name="value" type="int" value="5"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="675" name="chungus" x="3488" y="-2464">
+   <properties>
+    <property name="value" type="int" value="20"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="676" name="chungus" x="3488" y="3488">
+   <properties>
+    <property name="value" type="int" value="20"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="677" name="chungus" x="-1920" y="3488">
+   <properties>
+    <property name="value" type="int" value="20"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="678" name="chungus" x="-1920" y="-2432">
+   <properties>
+    <property name="value" type="int" value="20"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="679" name="chungus" x="256" y="-96">
+   <properties>
+    <property name="value" type="int" value="1"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="680" name="chungus" x="256" y="-352">
+   <properties>
+    <property name="value" type="int" value="1"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="681" name="chungus" x="288" y="-480">
+   <properties>
+    <property name="value" type="int" value="5"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="682" name="chungus" x="256" y="-736">
+   <properties>
+    <property name="value" type="int" value="1"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="683" name="chungus" x="256" y="-1056">
+   <properties>
+    <property name="value" type="int" value="20"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="684" name="chungus" x="672" y="-480">
+   <properties>
+    <property name="value" type="int" value="1"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="685" name="chungus" x="1440" y="-640">
+   <properties>
+    <property name="value" type="int" value="5"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="686" name="chungus" x="1246.67" y="-534.667">
+   <properties>
+    <property name="value" type="int" value="1"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="687" name="chungus" x="1824" y="-832">
+   <properties>
+    <property name="value" type="int" value="1"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="688" name="chungus" x="2016" y="-1280">
+   <properties>
+    <property name="value" type="int" value="1"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="689" name="chungus" x="608" y="1056">
+   <properties>
+    <property name="value" type="int" value="1"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="690" name="chungus" x="256" y="1248">
+   <properties>
+    <property name="value" type="int" value="5"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="691" name="chungus" x="416" y="1632">
+   <properties>
+    <property name="value" type="int" value="1"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="692" name="chungus" x="704" y="2048">
+   <properties>
+    <property name="value" type="int" value="1"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="693" name="chungus" x="294" y="2445">
+   <properties>
+    <property name="value" type="int" value="1"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="694" name="chungus" x="-32" y="2464">
+   <properties>
+    <property name="value" type="int" value="20"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="695" name="chungus" x="-480" y="736">
+   <properties>
+    <property name="value" type="int" value="1"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="696" name="chungus" x="-960" y="224">
+   <properties>
+    <property name="value" type="int" value="1"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="697" name="chungus" x="-1248" y="-352">
+   <properties>
+    <property name="value" type="int" value="20"/>
    </properties>
    <point/>
   </object>

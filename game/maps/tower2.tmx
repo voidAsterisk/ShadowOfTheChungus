@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.2" tiledversion="1.2.2" orientation="orthogonal" renderorder="right-down" width="100" height="100" tilewidth="32" tileheight="32" infinite="1" nextlayerid="3" nextobjectid="36">
+<map version="1.2" tiledversion="1.2.3" orientation="orthogonal" renderorder="right-down" width="100" height="100" tilewidth="32" tileheight="32" infinite="1" nextlayerid="3" nextobjectid="40">
  <tileset firstgid="1" source="../tilesheet.tsx"/>
  <layer id="1" name="Tile Layer 1" width="100" height="100">
   <data encoding="csv">
@@ -150,10 +150,27 @@
     <property name="spawn_id" value="big_zombie_critter"/>
    </properties>
   </object>
-  <object id="35" name="info_flag" x="128" y="96">
+  <object id="36" name="chungus" x="-288" y="-608">
    <properties>
-    <property name="flag" value="save_enabled"/>
-    <property name="value" type="bool" value="false"/>
+    <property name="value" type="int" value="5"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="37" name="chungus" x="288" y="-608">
+   <properties>
+    <property name="value" type="int" value="5"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="38" name="chungus" x="288" y="-96">
+   <properties>
+    <property name="value" type="int" value="5"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="39" name="chungus" x="-288" y="-96">
+   <properties>
+    <property name="value" type="int" value="5"/>
    </properties>
    <point/>
   </object>

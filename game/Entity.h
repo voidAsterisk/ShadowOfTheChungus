@@ -29,6 +29,16 @@ public:
 		Map = map;
 	}
 
+	bool IsKilled(std::vector <KillID> kid)
+	{
+		for (int i = 0; i < kid.size(); i++)
+		{
+			if (kid[i].Map == Map && kid[i].MapID == MapID)
+				return true;
+		}
+		return false;
+	}
+
 	bool operator==(const KillID& rhs)
 	{
 		return this->MapID == rhs.MapID && this->Map == rhs.Map;
@@ -48,7 +58,8 @@ public:
 	bool Flammable = false;
 	bool OnFire = false;
 	bool BloodSplatter = true;
-
+	bool TakesDamage = false;
+	bool Spawned = false;
 	double X = 0;
 	double Y = 0;
 	double Z = 0;
@@ -57,7 +68,7 @@ public:
 	bool IsSolid = false;
 	int DeathTime = -1;
 	int Level = -1;
-	int Respawn = false;
+	bool Respawn = false;
 	double VelocityX = 0;
 	double VelocityY = 0;
 	std::string id = "entity";
@@ -94,7 +105,7 @@ public:
 	virtual void DrawHealthBar(Viewport viewport, SDL_Renderer* ren);
 	virtual int ExperienceDrop();
 	virtual void OnClick();
-	SDL_Texture* LoadTexture(SDL_Renderer* ren, std::string img);
+	static SDL_Texture* LoadTexture(SDL_Renderer* ren, std::string img);
 	bool lineLine(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4);
 	bool lineRect(float x1, float y1, float x2, float y2, float rx, float ry, float rw, float rh);
 	void GenerateBloodSplatter(Viewport* viewport, double x, double y, double angle);
